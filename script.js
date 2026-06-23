@@ -8,7 +8,12 @@ import {
     onSnapshot,
     updateDoc,
     doc,
-    addDoc
+    addDoc,
+    getDoc,
+    deleteDoc,
+    query,
+    where,
+    orderBy
 } from "./firebase.js";
 
 let currentUser = null;
@@ -18,6 +23,13 @@ let adminComplaintCounts = {
     "In Progress": 0,
     Resolved: 0
 };
+
+let activeChatRoomId = null;
+let activeChatRoomTitle = "";
+let activeForumTopicId = null;
+let chatMessagesUnsubscribe = null;
+let chatRoomsUnsubscribe = null;
+let forumRepliesUnsubscribe = null;
 
 const loginTab = document.getElementById("loginTab");
 const registerTab = document.getElementById("registerTab");
@@ -166,6 +178,8 @@ function loadDashboard() {
     renderProfile();
     listenComplaints();
     listenNews();
+    listenChatRooms();
+    listenForumTopics();
 
     if (currentUser.role === "admin") {
         loadAdminPanel();
@@ -307,11 +321,438 @@ function listenNews() {
     });
 }
 
-/* ---------- ADMIN ---------- */
+function listenChatRooms() {
+    const container = document.getElementById("chatRoomList");
+
+    if (!container) return;
+
+    if (chatRoomsUnsubscribe) {
+        chatRoomsUnsubscribe();
+    }
+
+    chatRoomsUnsubscribe = onSnapshot(collection(db, "chatRooms"), (snap) => {
+        container.innerHTML = "";
+
+        snap.forEach(d => {
+            const room = d.data();
+            const isActive = d.id === activeChatRoomId;
+            const deletedText = room.isDeleted ? " (deleted)" : "";
+
+            container.innerHTML += `
+                <div class="card">
+                    <p><b>${room.name}${deletedText}</b></p>
+                    <p>Created by: ${room.createdByName}</p>
+                    <div class="student-actions">
+                        <button onclick="setActiveChatRoom('${d.id}', '${room.name.replace(/'/g, "\\'")}', ${room.isDeleted ? 'true' : 'false'})">
+                            ${isActive ? 'Joined' : 'Join'}
+                        </button>
+                        ${currentUser.role === 'admin' ? `<button onclick="deleteChatRoom('${d.id}')">Delete</button>` : ``}
+                    </div>
+                </div>
+            `;
+        });
+    });
+}
+
+window.createChatRoom = async function () {
+    const roomName = document.getElementById("chatRoomName").value.trim();
+
+    if (!roomName) {
+        return toast("Enter a group name");
+    }
+
+    await addDoc(collection(db, "chatRooms"), {
+        name: roomName,
+        createdBy: currentUser.id,
+        createdByName: currentUser.name,
+        createdAt: new Date().toISOString(),
+        isDeleted: false
+    });
+
+    document.getElementById("chatRoomName").value = "";
+    toast("Group created");
+};
+
+window.setActiveChatRoom = function (roomId, roomName) {
+    if (activeChatRoomId === roomId) return;
+
+    activeChatRoomId = roomId;
+    activeChatRoomTitle = roomName;
+    document.getElementById("activeChatRoomTitle").textContent = roomName;
+    document.getElementById("leaveRoomBtn").classList.remove("hidden");
+    document.getElementById("chatComposer").classList.remove("hidden");
+
+    if (chatMessagesUnsubscribe) {
+        chatMessagesUnsubscribe();
+    }
+
+    const messagesQuery = query(
+        collection(db, "chatMessages"),
+        where("roomId", "==", roomId),
+        orderBy("createdAt")
+    );
+
+    chatMessagesUnsubscribe = onSnapshot(messagesQuery, (snap) => {
+        const messagesEl = document.getElementById("chatMessages");
+        messagesEl.innerHTML = "";
+
+        snap.forEach(d => {
+            const msg = d.data();
+            const own = msg.userId === currentUser.id;
+            const deleted = msg.isDeleted;
+            const text = deleted ? "This message was deleted" : msg.text;
+
+            messagesEl.innerHTML += `
+                <div class="chat-message ${own ? 'own' : ''} ${deleted ? 'deleted' : ''}">
+                    <div class="message-header">
+                        <span><b>${msg.userName}</b></span>
+                        <span>${new Date(msg.createdAt).toLocaleString()}</span>
+                    </div>
+                    <p>${text}</p>
+                    <div class="message-actions">
+                        ${(!deleted && own) ? `<button onclick="deleteChatMessage('${d.id}', '${msg.userId}')">Delete</button>` : ''}
+                        ${currentUser.role === 'admin' ? `<button onclick="deleteChatMessage('${d.id}', '${msg.userId}')">Remove</button>` : ''}
+                    </div>
+                </div>
+            `;
+        });
+
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+    });
+};
+
+window.sendChatMessage = async function () {
+    if (!activeChatRoomId) {
+        return toast("Select a group first");
+    }
+
+    const messageInput = document.getElementById("chatMessageInput");
+    const text = messageInput.value.trim();
+
+    if (!text) {
+        return toast("Enter a message");
+    }
+
+    await addDoc(collection(db, "chatMessages"), {
+        roomId: activeChatRoomId,
+        userId: currentUser.id,
+        userName: currentUser.name,
+        text,
+        createdAt: new Date().toISOString(),
+        isDeleted: false
+    });
+
+    messageInput.value = "";
+};
+
+window.leaveChatRoom = function () {
+    activeChatRoomId = null;
+    activeChatRoomTitle = "";
+    document.getElementById("activeChatRoomTitle").textContent = "Select a group to join";
+    document.getElementById("leaveRoomBtn").classList.add("hidden");
+    document.getElementById("chatComposer").classList.add("hidden");
+    document.getElementById("chatMessages").innerHTML = "";
+
+    if (chatMessagesUnsubscribe) {
+        chatMessagesUnsubscribe();
+        chatMessagesUnsubscribe = null;
+    }
+};
+
+window.deleteChatRoom = async function (roomId) {
+    if (currentUser.role !== "admin") {
+        return toast("Only admin can delete rooms");
+    }
+
+    await deleteDoc(doc(db, "chatRooms", roomId));
+    toast("Group deleted");
+};
+
+window.deleteChatMessage = async function (messageId, userId) {
+    if (currentUser.role === "admin") {
+        await deleteDoc(doc(db, "chatMessages", messageId));
+        return toast("Message removed");
+    }
+
+    if (currentUser.id !== userId) {
+        return toast("Only the sender can delete this message");
+    }
+
+    await updateDoc(doc(db, "chatMessages", messageId), {
+        isDeleted: true,
+        deletedBy: currentUser.id,
+        deletedAt: new Date().toISOString()
+    });
+
+    toast("Message deleted");
+};
+
+function listenForumTopics() {
+    const container = document.getElementById("forumTopicList");
+
+    if (!container) return;
+
+    onSnapshot(collection(db, "forumTopics"), (snap) => {
+        container.innerHTML = "";
+
+        snap.forEach(d => {
+            const topic = d.data();
+            const isOwner = topic.userId === currentUser.id;
+            const deleted = topic.isDeleted;
+
+            if (deleted && currentUser.role !== "admin" && !isOwner) return;
+
+            const statusText = deleted ? " (deleted)" : "";
+
+            container.innerHTML += `
+                <div class="card">
+                    <h4>${topic.title}${statusText}</h4>
+                    <p>${topic.body.substring(0, 120)}${topic.body.length > 120 ? '...' : ''}</p>
+                    <p class="meta">By ${topic.userName} • ${new Date(topic.createdAt).toLocaleString()}</p>
+                    <div class="student-actions">
+                        <button onclick="openForumTopicDetail('${d.id}')">
+                            View
+                        </button>
+                        ${(!deleted && isOwner) ? `<button onclick="deleteForumTopic('${d.id}', '${topic.userId}')">Delete</button>` : ''}
+                        ${currentUser.role === 'admin' ? `<button onclick="deleteForumTopic('${d.id}', '${topic.userId}')">Remove</button>` : ''}
+                    </div>
+                </div>
+            `;
+        });
+    });
+}
+
+window.createForumTopic = async function () {
+    const title = document.getElementById("forumTopicTitle").value.trim();
+    const body = document.getElementById("forumTopicBody").value.trim();
+
+    if (!title || !body) {
+        return toast("Fill title and description");
+    }
+
+    await addDoc(collection(db, "forumTopics"), {
+        title,
+        body,
+        userId: currentUser.id,
+        userName: currentUser.name,
+        createdAt: new Date().toISOString(),
+        isDeleted: false
+    });
+
+    document.getElementById("forumTopicTitle").value = "";
+    document.getElementById("forumTopicBody").value = "";
+    toast("Discussion created");
+};
+
+window.openForumTopicDetail = async function (topicId) {
+    activeForumTopicId = topicId;
+    const topicDoc = await getDoc(doc(db, "forumTopics", topicId));
+
+    if (!topicDoc.exists()) {
+        return toast("Topic not found");
+    }
+
+    const topic = topicDoc.data();
+    document.getElementById("forumTopicDetailTitle").textContent = topic.title;
+    document.getElementById("forumTopicDetailBody").textContent = topic.body;
+    document.getElementById("forumTopicDetailMeta").textContent = `By ${topic.userName} • ${new Date(topic.createdAt).toLocaleString()}`;
+    document.getElementById("forumTopicDetail").classList.remove("hidden");
+
+    if (forumRepliesUnsubscribe) {
+        forumRepliesUnsubscribe();
+    }
+
+    const repliesQuery = query(
+        collection(db, "forumReplies"),
+        where("topicId", "==", topicId),
+        orderBy("createdAt")
+    );
+
+    forumRepliesUnsubscribe = onSnapshot(repliesQuery, (snap) => {
+        const repliesEl = document.getElementById("forumReplies");
+        repliesEl.innerHTML = "";
+
+        snap.forEach(d => {
+            const reply = d.data();
+            const isOwner = reply.userId === currentUser.id;
+            const deleted = reply.isDeleted;
+            const content = deleted ? "This reply was deleted" : reply.text;
+
+            repliesEl.innerHTML += `
+                <div class="card reply-card ${deleted ? 'deleted' : ''}">
+                    <p>${content}</p>
+                    <p class="meta">By ${reply.userName} • ${new Date(reply.createdAt).toLocaleString()}</p>
+                    <div class="student-actions">
+                        ${(!deleted && isOwner) ? `<button onclick="deleteForumReply('${d.id}', '${reply.userId}')">Delete</button>` : ''}
+                        ${currentUser.role === 'admin' ? `<button onclick="deleteForumReply('${d.id}', '${reply.userId}')">Remove</button>` : ''}
+                    </div>
+                </div>
+            `;
+        });
+    });
+};
+
+window.addForumReply = async function () {
+    if (!activeForumTopicId) {
+        return toast("Open a topic first");
+    }
+
+    const text = document.getElementById("forumReplyInput").value.trim();
+    if (!text) {
+        return toast("Write your reply");
+    }
+
+    await addDoc(collection(db, "forumReplies"), {
+        topicId: activeForumTopicId,
+        userId: currentUser.id,
+        userName: currentUser.name,
+        text,
+        createdAt: new Date().toISOString(),
+        isDeleted: false
+    });
+
+    document.getElementById("forumReplyInput").value = "";
+};
+
+window.closeForumTopicDetail = function () {
+    activeForumTopicId = null;
+    document.getElementById("forumTopicDetail").classList.add("hidden");
+    document.getElementById("forumReplies").innerHTML = "";
+
+    if (forumRepliesUnsubscribe) {
+        forumRepliesUnsubscribe();
+        forumRepliesUnsubscribe = null;
+    }
+};
+
+window.deleteForumTopic = async function (topicId, userId) {
+    if (currentUser.role === "admin") {
+        await deleteDoc(doc(db, "forumTopics", topicId));
+        toast("Topic removed");
+        return;
+    }
+
+    if (currentUser.id !== userId) {
+        return toast("Only the topic creator can delete this topic");
+    }
+
+    await updateDoc(doc(db, "forumTopics", topicId), {
+        isDeleted: true,
+        deletedBy: currentUser.id,
+        deletedAt: new Date().toISOString()
+    });
+
+    toast("Topic deleted");
+};
+
+window.deleteForumReply = async function (replyId, userId) {
+    if (currentUser.role === "admin") {
+        await deleteDoc(doc(db, "forumReplies", replyId));
+        toast("Reply removed");
+        return;
+    }
+
+    if (currentUser.id !== userId) {
+        return toast("Only the reply creator can delete this reply");
+    }
+
+    await updateDoc(doc(db, "forumReplies", replyId), {
+        isDeleted: true,
+        deletedBy: currentUser.id,
+        deletedAt: new Date().toISOString()
+    });
+
+    toast("Reply deleted");
+};
+
+window.deleteNews = async function (newsId) {
+    if (currentUser.role !== "admin") {
+        return toast("Only admin can delete news");
+    }
+
+    await deleteDoc(doc(db, "news", newsId));
+    toast("News removed");
+};
+
 function loadAdminPanel() {
     loadStudents();
     loadAdminComplaints();
     renderAdminAnalytics();
+    renderNewsManagement();
+    renderChatModeration();
+    renderForumModeration();
+}
+
+function renderNewsManagement() {
+    const container = document.getElementById("newsManagement");
+
+    if (!container) return;
+
+    onSnapshot(collection(db, "news"), (snap) => {
+        container.innerHTML = "";
+
+        snap.forEach(d => {
+            const n = d.data();
+
+            container.innerHTML += `
+                <div class="card">
+                    <h4>${n.title}</h4>
+                    <p>${n.message}</p>
+                    <button onclick="deleteNews('${d.id}')">Delete</button>
+                </div>
+            `;
+        });
+    });
+}
+
+function renderChatModeration() {
+    const container = document.getElementById("chatModeration");
+
+    if (!container) return;
+
+    const messagesQuery = query(collection(db, "chatMessages"), orderBy("createdAt"));
+
+    onSnapshot(messagesQuery, (snap) => {
+        container.innerHTML = "";
+
+        snap.forEach(d => {
+            const msg = d.data();
+            const deleted = msg.isDeleted;
+
+            container.innerHTML += `
+                <div class="card">
+                    <p><b>${msg.userName}</b> in room ${msg.roomId}</p>
+                    <p>${deleted ? 'DELETED: ' + (msg.text || '') : msg.text}</p>
+                    <p class="meta">${new Date(msg.createdAt).toLocaleString()}</p>
+                    <button onclick="deleteChatMessage('${d.id}', '${msg.userId}')">Remove</button>
+                </div>
+            `;
+        });
+    });
+}
+
+function renderForumModeration() {
+    const container = document.getElementById("forumModeration");
+
+    if (!container) return;
+
+    onSnapshot(collection(db, "forumTopics"), (snap) => {
+        container.innerHTML = "";
+
+        snap.forEach(d => {
+            const topic = d.data();
+            const deleted = topic.isDeleted;
+
+            container.innerHTML += `
+                <div class="card">
+                    <h4>${topic.title} ${deleted ? '(deleted)' : ''}</h4>
+                    <p>${topic.body.substring(0, 120)}${topic.body.length > 120 ? '...' : ''}</p>
+                    <p class="meta">By ${topic.userName} • ${new Date(topic.createdAt).toLocaleString()}</p>
+                    <button onclick="deleteForumTopic('${d.id}', '${topic.userId}')">Remove</button>
+                </div>
+            `;
+        });
+    });
 }
 
 /* ---------- STUDENTS ---------- */
