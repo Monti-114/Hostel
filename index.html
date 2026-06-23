@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hostel Management System</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- Authentication -->
+<div id="authContainer" class="auth-container">
+    <div class="auth-box">
+        <h2>Hostel Management System</h2>
+
+        <div class="tabs">
+            <button id="loginTab" class="active">Login</button>
+            <button id="registerTab">Register</button>
+        </div>
+
+        <!-- Login -->
+        <form id="loginForm">
+            <input type="text" id="loginId" placeholder="University ID" required>
+            <input type="password" id="loginPassword" placeholder="Password" required>
+            <button type="submit">Login</button>
+        </form>
+
+        <!-- Register -->
+        <form id="registerForm" class="hidden">
+            <input type="text" id="regId" placeholder="University ID" required>
+            <input type="text" id="regName" placeholder="Full Name" required>
+            <input type="password" id="regPassword" placeholder="Password" required>
+            <input type="password" id="confirmPassword" placeholder="Confirm Password" required>
+            <input type="text" id="phone" placeholder="Phone Number" required>
+
+            <select id="gender" required>
+                <option value="">Gender</option>
+                <option>Male</option>
+                <option>Female</option>
+            </select>
+
+            <select id="floor" required>
+                <option value="">Floor</option>
+                <option>GF</option>
+                <option>F1</option>
+                <option>F2</option>
+                <option>F3</option>
+            </select>
+
+            <input type="text" id="room" placeholder="Room Number" required>
+
+            <button type="submit">Register</button>
+        </form>
+    </div>
+</div>
+
+<!-- Dashboard -->
+<div id="dashboardContainer" class="hidden">
+    <nav class="navbar">
+        <h2>Hostel Dashboard</h2>
+        <div>
+            <button onclick="showPage('dashboard')">Dashboard</button>
+            <button onclick="showPage('announcements')">News</button>
+            <button onclick="showPage('complaints')">Complaints</button>
+            <button onclick="showPage('profile')">Profile</button>
+            <button id="adminBtn" class="hidden" onclick="showPage('admin')">Admin</button>
+            <button id="logoutBtn">Logout</button>
+        </div>
+    </nav>
+
+    <main>
+        <!-- Dashboard Page -->
+        <section id="dashboard" class="page active">
+            <h2>Dashboard</h2>
+            <div id="dashboardCards" class="cards"></div>
+        </section>
+
+        <!-- Announcements -->
+        <section id="announcements" class="page">
+            <h2>Announcements</h2>
+            <div id="announcementList"></div>
+        </section>
+
+        <!-- Complaints -->
+        <section id="complaints" class="page">
+            <h2>Complaints</h2>
+
+            <form id="complaintForm">
+                <select id="complaintType" required>
+                    <option value="">Select issue type</option>
+                    <option>Electricity</option>
+                    <option>Water</option>
+                    <option>Internet</option>
+                    <option>Noise</option>
+                    <option>Other</option>
+                </select>
+                <textarea id="complaintDesc" placeholder="Describe your issue" required></textarea>
+                <button type="submit">Submit</button>
+            </form>
+
+            <div id="complaintsList"></div>
+        </section>
+
+        <!-- Profile -->
+        <section id="profile" class="page">
+            <h2>Profile</h2>
+            <div id="profileData"></div>
+            <div class="card">
+                <h3>Edit Profile</h3>
+                <input id="nickname" placeholder="Nickname">
+                <button type="button" onclick="updateProfile()">Save Profile</button>
+            </div>
+        </section>
+
+        <!-- Admin -->
+        <section id="admin" class="page">
+            <h2>Admin Panel</h2>
+            <div class="card">
+                <h3>Create News Post</h3>
+                <input id="newsTitle" placeholder="Title">
+                <textarea id="newsMessage" placeholder="Message"></textarea>
+                <button type="button" onclick="addNews()">Post News</button>
+            </div>
+
+            <div class="admin-grid">
+                <div>
+                    <h3>Students</h3>
+                    <div id="studentList"></div>
+                </div>
+
+                <div>
+                    <h3>New Complaints</h3>
+                    <div id="newComplaints"></div>
+                </div>
+
+                <div>
+                    <h3>In Progress</h3>
+                    <div id="inProgressComplaints"></div>
+                </div>
+
+                <div>
+                    <h3>Resolved</h3>
+                    <div id="resolvedComplaints"></div>
+                </div>
+
+                <div>
+                    <h3>System Overview</h3>
+                    <div id="roomAnalytics"></div>
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+
+<script type="module" src="script.js"></script>
+</body>
+</html>
