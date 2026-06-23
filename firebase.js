@@ -7,9 +7,11 @@ import {
     getDocs,
     updateDoc,
     addDoc,
+    deleteDoc,
     collection,
     query,
     where,
+    orderBy,
     onSnapshot
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
@@ -28,7 +30,7 @@ const db = getFirestore(app);
 
 const ADMIN_ID = "202511222";
 
-export { db, ADMIN_ID, doc, setDoc, getDoc, getDocs, updateDoc, addDoc, collection, query, where, onSnapshot };
+export { db, ADMIN_ID, doc, setDoc, getDoc, getDocs, updateDoc, addDoc, deleteDoc, collection, query, where, orderBy, onSnapshot };
 
 export async function registerUser(user) {
     const ref = doc(db, "users", user.id);
