@@ -64,6 +64,8 @@
         <div>
             <button onclick="showPage('dashboard')">Dashboard</button>
             <button onclick="showPage('announcements')">News</button>
+            <button onclick="showPage('chat')">Chat</button>
+            <button onclick="showPage('forum')">Forum</button>
             <button onclick="showPage('complaints')">Complaints</button>
             <button onclick="showPage('profile')">Profile</button>
             <button id="adminBtn" class="hidden" onclick="showPage('admin')">Admin</button>
@@ -82,6 +84,63 @@
         <section id="announcements" class="page">
             <h2>Announcements</h2>
             <div id="announcementList"></div>
+        </section>
+
+        <!-- Chat -->
+        <section id="chat" class="page">
+            <h2>Student Chat</h2>
+            <div class="chat-layout">
+                <div class="chat-sidebar">
+                    <div class="card">
+                        <h3>Create Group</h3>
+                        <input id="chatRoomName" placeholder="Group name">
+                        <button type="button" onclick="createChatRoom()">Create Group</button>
+                    </div>
+                    <div class="card">
+                        <h3>Groups</h3>
+                        <div id="chatRoomList"></div>
+                    </div>
+                </div>
+                <div class="chat-room">
+                    <div class="card chat-room-header">
+                        <h3 id="activeChatRoomTitle">Select a group to join</h3>
+                        <button id="leaveRoomBtn" class="hidden" onclick="leaveChatRoom()">Leave Group</button>
+                    </div>
+                    <div id="chatMessages" class="chat-messages"></div>
+                    <div id="chatComposer" class="chat-composer hidden">
+                        <textarea id="chatMessageInput" placeholder="Write a message"></textarea>
+                        <button type="button" onclick="sendChatMessage()">Send</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Forum -->
+        <section id="forum" class="page">
+            <h2>Student Forum</h2>
+            <div class="forum-layout">
+                <div class="card">
+                    <h3>Start a Discussion</h3>
+                    <input id="forumTopicTitle" placeholder="Discussion title">
+                    <textarea id="forumTopicBody" placeholder="Write the first post"></textarea>
+                    <button type="button" onclick="createForumTopic()">Create Topic</button>
+                </div>
+                <div class="card">
+                    <h3>Topics</h3>
+                    <div id="forumTopicList"></div>
+                </div>
+                <div id="forumTopicDetail" class="card hidden">
+                    <div class="forum-detail-header">
+                        <h3 id="forumTopicDetailTitle"></h3>
+                        <button id="closeTopicDetailBtn" type="button" onclick="closeForumTopicDetail()">Close</button>
+                    </div>
+                    <p id="forumTopicDetailBody"></p>
+                    <p class="meta" id="forumTopicDetailMeta"></p>
+                    <div id="forumReplies"></div>
+                    <textarea id="forumReplyInput" placeholder="Write a reply"></textarea>
+                    <button type="button" onclick="addForumReply()">Reply</button>
+                </div>
+            </div>
         </section>
 
         <!-- Complaints -->
@@ -149,6 +208,21 @@
                 <div>
                     <h3>System Overview</h3>
                     <div id="roomAnalytics"></div>
+                </div>
+
+                <div>
+                    <h3>News Management</h3>
+                    <div id="newsManagement"></div>
+                </div>
+
+                <div>
+                    <h3>Chat Moderation</h3>
+                    <div id="chatModeration"></div>
+                </div>
+
+                <div>
+                    <h3>Forum Moderation</h3>
+                    <div id="forumModeration"></div>
                 </div>
             </div>
         </section>
