@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Student Dashboard — ULK Hostel</title>
+<link rel="stylesheet" href="style.css"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+<style>
+  .info-row{display:flex;align-items:center;gap:.75rem;padding:.75rem 0;border-bottom:1px solid var(--bg);}
+  .info-row:last-child{border-bottom:none;}
+  .info-row .lbl{font-size:.8rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;min-width:130px;}
+  .info-row .val{font-size:.95rem;font-weight:500;}
+  .ticket-card{border:1.5px solid var(--border);border-radius:var(--radius);padding:1rem;margin-bottom:.75rem;cursor:pointer;transition:border-color .15s,box-shadow .15s;}
+  .ticket-card:hover{border-color:var(--sky);box-shadow:0 2px 8px rgba(21,101,192,.12);}
+  .ticket-card.selected{border-color:var(--blue);background:#e3f2fd;}
+  .chat-wrap{display:flex;flex-direction:column;height:350px;}
+  .chat-msgs{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:.65rem;padding:.75rem;background:#f8fafc;border:1.5px solid var(--border);border-radius:var(--radius) var(--radius) 0 0;}
+  .c-msg{display:flex;flex-direction:column;max-width:82%;}
+  .c-msg.me{align-self:flex-end;align-items:flex-end;}
+  .c-msg.other{align-self:flex-start;}
+  .c-msg .bubble{padding:.6rem .9rem;border-radius:12px;font-size:.875rem;line-height:1.5;}
+  .c-msg.me .bubble{background:var(--blue);color:#fff;border-bottom-right-radius:3px;}
+  .c-msg.other .bubble{background:var(--surface);border:1px solid var(--border);border-bottom-left-radius:3px;}
+  .c-msg .meta{font-size:.7rem;color:var(--muted);margin-top:.15rem;}
+  .c-msg.me .meta{text-align:right;}
+  .chat-input{display:flex;gap:.5rem;border:1.5px solid var(--border);border-top:none;border-radius:0 0 var(--radius) var(--radius);padding:.6rem;}
+  .chat-input input{flex:1;border:none;outline:none;font-size:.9rem;background:transparent;}
+</style>
+</head>
+<body>
+
+<div id="loadingOverlay" class="loading-overlay">
+  <div><div class="spinner"></div><p style="text-align:center;color:var(--muted);margin-top:.5rem;">Loading…</p></div>
+</div>
+
+<div class="dash-layout" id="dashLayout" style="display:none;">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">🏠 ULK <span>Hostel</span></div>
+    <div class="sidebar-user">
+      <div class="avatar" id="stuAvatar">S</div>
+      <div class="user-info">
+        <div class="name" id="stuName">Student</div>
+        <div class="role">Student</div>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">My Account</div>
+      <a href="#" class="active" data-section="profile">👤 My Profile</a>
+      <a href="#" data-section="payment">💳 My Payment</a>
+      <div class="nav-section">Support</div>
+      <a href="#" data-section="tickets">🎫 My Tickets</a>
+      <div class="nav-section">Account</div>
+      <a href="#" data-section="changepass">🔑 Change Password</a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="btn btn-danger" style="width:100%;justify-content:center;" id="logoutBtn">🚪 Logout</button>
+    </div>
+  </aside>
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <!-- MAIN -->
+  <main class="dash-main">
+    <div class="dash-topbar">
+      <button class="hamburger" id="hamburger">☰</button>
+      <span class="topbar-title" id="topbarTitle">My Profile</span>
+    </div>
+
+    <div class="dash-content">
+
+      <!-- ══ PROFILE ══ -->
+      <div class="dash-section active" id="sec-profile">
+        <div class="section-heading">My Profile</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;" class="profile-grid">
+          <!-- Personal Info -->
+          <div class="card">
+            <div class="card-header"><h3>🪪 Personal Information</h3></div>
+            <div id="profileAlert"></div>
+            <div class="info-row"><span class="lbl">Student ID</span><span class="val" id="pStudentId">—</span></div>
+            <div class="info-row"><span class="lbl">Full Name</span><span class="val" id="pFullName">—</span></div>
+            <div class="info-row"><span class="lbl">Email</span><span class="val" id="pEmail">—</span></div>
+            <div class="info-row"><span class="lbl">Phone</span><span class="val" id="pPhone">—</span></div>
+            <div class="info-row"><span class="lbl">Gender</span><span class="val" id="pGender">—</span></div>
+          </div>
+          <!-- Room Info -->
+          <div class="card">
+            <div class="card-header"><h3>🏠 Room Information</h3></div>
+            <div class="info-row"><span class="lbl">Room Type</span><span class="val" id="pRoomType">—</span></div>
+            <div class="info-row"><span class="lbl">Hostel</span><span class="val" id="pHostel">—</span></div>
+            <div class="info-row"><span class="lbl">Floor</span><span class="val" id="pFloor">—</span></div>
+            <div class="info-row"><span class="lbl">Room Number</span><span class="val" id="pRoomNumber">—</span></div>
+            <div class="info-row"><span class="lbl">Room Code</span><span class="val" id="pRoomCode">—</span></div>
+            <div class="info-row"><span class="lbl">Monthly Price</span><span class="val fw-bold" id="pPrice" style="color:var(--blue);">—</span></div>
+            <div class="info-row"><span class="lbl">Bathroom</span><span class="val" id="pBathroom">—</span></div>
+            <div class="info-row"><span class="lbl">Internet</span><span class="val" id="pWifi">—</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ PAYMENT ══ -->
+      <div class="dash-section" id="sec-payment">
+        <div class="section-heading">My Payment</div>
+        <div class="card" style="max-width:560px;">
+          <div class="card-header"><h3>💳 Payment Status</h3></div>
+          <div class="info-row"><span class="lbl">Payment Status</span><span class="val" id="pyStatus">—</span></div>
+          <div class="info-row"><span class="lbl">Due Date</span><span class="val" id="pyDueDate">—</span></div>
+          <div class="info-row"><span class="lbl">Room Type</span><span class="val" id="pyRoomType">—</span></div>
+          <div class="info-row"><span class="lbl">Room Code</span><span class="val" id="pyRoomCode">—</span></div>
+          <div class="info-row"><span class="lbl">Amount Due</span><span class="val fw-bold" id="pyAmount" style="color:var(--blue);">—</span></div>
+          <div class="info-row"><span class="lbl">Last Updated</span><span class="val" id="pyUpdated">—</span></div>
+          <div class="info-row"><span class="lbl">Notes</span><span class="val" id="pyNotes" style="color:var(--muted);">—</span></div>
+          <div style="margin-top:1.2rem;padding:1rem;background:var(--bg);border-radius:var(--radius);">
+            <p style="font-size:.875rem;color:var(--muted);">💡 If you have payment questions, contact the hostel administration or open a support ticket.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ TICKETS ══ -->
+      <div class="dash-section" id="sec-tickets">
+        <div class="section-heading">My Support Tickets</div>
+        <div style="display:grid;grid-template-columns:1fr 1.4fr;gap:1.5rem;height:100%;" class="ticket-grid">
+
+          <!-- Left: ticket list + new ticket -->
+          <div>
+            <button class="btn btn-primary" style="width:100%;justify-content:center;margin-bottom:1rem;" onclick="openNewTicket()">➕ New Ticket</button>
+            <div id="myTicketsList">
+              <p class="muted center" style="margin-top:1rem;">Loading…</p>
+            </div>
+          </div>
+
+          <!-- Right: ticket chat view -->
+          <div class="card" id="ticketChatPanel" style="display:none;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem;">
+              <div>
+                <div style="font-weight:700;font-size:1rem;" id="chatTicketSubject">—</div>
+                <div style="font-size:.8rem;color:var(--muted);" id="chatTicketMeta">—</div>
+              </div>
+              <span id="chatTicketStatus"></span>
+            </div>
+            <div class="chat-wrap">
+              <div class="chat-msgs" id="studentChatBox"></div>
+              <div class="chat-input" id="chatInputArea">
+                <input type="text" id="stuReplyInput" placeholder="Type a message…" />
+                <button class="btn btn-primary btn-sm" onclick="sendStudentReply()">Send</button>
+              </div>
+            </div>
+          </div>
+          <div class="card" id="ticketEmptyPanel" style="display:flex;align-items:center;justify-content:center;min-height:300px;">
+            <div style="text-align:center;color:var(--muted);">
+              <div style="font-size:3rem;margin-bottom:.5rem;">🎫</div>
+              <p>Select a ticket to view the conversation.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ CHANGE PASSWORD ══ -->
+      <div class="dash-section" id="sec-changepass">
+        <div class="section-heading">Change Password</div>
+        <div class="card" style="max-width:440px;">
+          <div id="changePassAlert"></div>
+          <div class="form-group">
+            <label>New Password</label>
+            <input type="password" class="form-control" id="newPass1" placeholder="Min. 6 characters" />
+          </div>
+          <div class="form-group">
+            <label>Confirm New Password</label>
+            <input type="password" class="form-control" id="newPass2" placeholder="Repeat new password" />
+          </div>
+          <button class="btn btn-primary" onclick="changeStuPassword()">💾 Update Password</button>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- New Ticket Modal -->
+<div class="modal-overlay hidden" id="newTicketModal">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-header">
+      <h3>Open New Ticket</h3>
+      <button class="modal-close" onclick="closeModal('newTicketModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="newTicketAlert"></div>
+      <div class="form-group">
+        <label>Subject *</label>
+        <input type="text" class="form-control" id="ticketSubject" placeholder="Brief description of your issue" />
+      </div>
+      <div class="form-group">
+        <label>Category</label>
+        <select class="form-control" id="ticketCategory">
+          <option>Room Issue</option>
+          <option>Payment Question</option>
+          <option>WiFi Problem</option>
+          <option>Maintenance Request</option>
+          <option>General Inquiry</option>
+          <option>Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Description *</label>
+        <textarea class="form-control" id="ticketDesc" rows="4" placeholder="Describe your issue in detail…"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('newTicketModal')">Cancel</button>
+      <button class="btn btn-primary" id="submitTicketBtn" onclick="submitTicket()">Submit Ticket</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import {
+  auth, db, signOut, onAuthStateChanged, updatePassword,
+  doc, getDoc, getDocs, addDoc, updateDoc,
+  collection, query, where, orderBy, onSnapshot, serverTimestamp
+} from './firebase.js?v=20260629';
+
+const ROOM_TYPES = {
+  single:{ name:'Single Room', price:180000, bathroom:'Private Bathroom', wifi:'✅ Included' },
+  double:{ name:'Double Room', price:90000,  bathroom:'Shared Bathroom',  wifi:'✅ Included' },
+  quad:  { name:'Quad Room',   price:50000,  bathroom:'Shared Bathroom',  wifi:'✅ Included' }
+};
+
+let currentUser   = null;
+let currentData   = null;
+let myTickets     = [];
+let selectedTicketId = null;
+let chatUnsub        = null;
+let ticketDocUnsub   = null;
+let ticketsUnsub = [];
+let ticketQueryMaps = [];
+
+/* ─── Auth Guard ─────────────────────────────── */
+onAuthStateChanged(auth, async (user) => {
+  const fallbackRole = sessionStorage.getItem('userRole');
+  const fallbackProfileRaw = sessionStorage.getItem('userProfile');
+
+  if (!user) {
+    if (fallbackRole === 'student') {
+      let fallbackData = null;
+      try {
+        fallbackData = fallbackProfileRaw ? JSON.parse(fallbackProfileRaw) : null;
+      } catch (_) {}
+
+      if (!fallbackData) {
+        fallbackData = {
+          studentId: sessionStorage.getItem('userId') || '—',
+          fullName: 'Student',
+          email: '—',
+          role: 'student'
+        };
+      }
+
+      currentUser = { uid: fallbackData.uid || fallbackData.id || sessionStorage.getItem('userId') || 'local-student' };
+      currentData = fallbackData;
+      populateProfile(fallbackData);
+      document.getElementById('stuName').textContent   = fallbackData.fullName||'Student';
+      document.getElementById('stuAvatar').textContent = (fallbackData.fullName||'S')[0].toUpperCase();
+      document.getElementById('loadingOverlay').classList.add('hidden');
+      document.getElementById('dashLayout').style.display='flex';
+      loadMyTickets();
+      return;
+    }
+    window.location.href='login.html';
+    return;
+  }
+
+  const data = await getUserData(user.uid);
+  if (!data) {
+    const fallbackData = fallbackProfileRaw ? JSON.parse(fallbackProfileRaw) : null;
+    if (fallbackData && fallbackData.role === 'student') {
+      currentUser = user;
+      currentData = fallbackData;
+      populateProfile(fallbackData);
+      document.getElementById('stuName').textContent   = fallbackData.fullName||'Student';
+      document.getElementById('stuAvatar').textContent = (fallbackData.fullName||'S')[0].toUpperCase();
+      document.getElementById('loadingOverlay').classList.add('hidden');
+      document.getElementById('dashLayout').style.display='flex';
+      loadMyTickets();
+      return;
+    }
+    await signOut(auth); window.location.href='login.html'; return;
+  }
+  if (data.role==='admin') { window.location.href='admin-dashboard.html'; return; }
+  currentUser = user;
+  currentData = data;
+  populateProfile(data);
+  document.getElementById('stuName').textContent   = data.fullName||'Student';
+  document.getElementById('stuAvatar').textContent = (data.fullName||'S')[0].toUpperCase();
+  document.getElementById('loadingOverlay').classList.add('hidden');
+  document.getElementById('dashLayout').style.display='flex';
+  loadMyTickets();
+});
+
+async function getUserData(uid) {
+  const q = query(collection(db,'users'), where('uid','==',uid));
+  const snap = await getDocs(q);
+  if (!snap.empty) return { id: snap.docs[0].id, ...snap.docs[0].data() };
+  return null;
+}
+
+function populateProfile(d) {
+  const rt = ROOM_TYPES[d.roomType]||{};
+  document.getElementById('pStudentId').textContent = d.studentId||'—';
+  document.getElementById('pFullName').textContent  = d.fullName||'—';
+  document.getElementById('pEmail').textContent     = d.email||'—';
+  document.getElementById('pPhone').textContent     = d.phone||'—';
+  document.getElementById('pGender').textContent    = d.gender||'—';
+  document.getElementById('pRoomType').textContent  = rt.name||d.roomType||'—';
+  document.getElementById('pHostel').textContent    = d.hostel==='female' ? 'Women Hostel' : d.hostel==='male' ? 'Men Hostel' : '—';
+  document.getElementById('pFloor').textContent     = d.floor||'—';
+  document.getElementById('pRoomNumber').textContent = d.roomNumber||'—';
+  document.getElementById('pRoomCode').textContent  = d.roomCode || (d.floor && d.roomNumber ? `${d.floor}-${d.roomNumber}` : '—');
+  document.getElementById('pPrice').textContent     = rt.price?rt.price.toLocaleString()+' RWF/month':'—';
+  document.getElementById('pBathroom').textContent  = rt.bathroom||'—';
+  document.getElementById('pWifi').textContent      = rt.wifi||'—';
+
+  // Payment
+  const payMap={Paid:'<span class="badge badge-green">Paid</span>',Pending:'<span class="badge badge-yellow">Pending</span>',Overdue:'<span class="badge badge-red">Overdue</span>'};
+  document.getElementById('pyStatus').innerHTML  = payMap[d.paymentStatus]||'<span class="badge badge-gray">—</span>';
+  document.getElementById('pyDueDate').textContent = d.dueDate||'—';
+  document.getElementById('pyRoomType').textContent= rt.name||d.roomType||'—';
+  document.getElementById('pyRoomCode').textContent = d.roomCode || (d.floor && d.roomNumber ? `${d.floor}-${d.roomNumber}` : '—');
+  document.getElementById('pyAmount').textContent  = rt.price?rt.price.toLocaleString()+' RWF':'—';
+  document.getElementById('pyNotes').textContent   = d.notes||'None';
+  const updated = d.updatedAt?.toDate?d.updatedAt.toDate().toLocaleDateString():d.updatedAt?.seconds?new Date(d.updatedAt.seconds*1000).toLocaleDateString():'—';
+  document.getElementById('pyUpdated').textContent = updated;
+}
+
+/* ─── Navigation ─────────────────────────────── */
+document.querySelectorAll('.sidebar-nav a[data-section]').forEach(a=>{
+  a.addEventListener('click',e=>{
+    e.preventDefault();
+    document.querySelectorAll('.sidebar-nav a').forEach(x=>x.classList.remove('active'));
+    a.classList.add('active');
+    document.querySelectorAll('.dash-section').forEach(s=>s.classList.remove('active'));
+    document.getElementById('sec-'+a.dataset.section).classList.add('active');
+    document.getElementById('topbarTitle').textContent = a.textContent.replace(/[👤💳🎫🔑]/g,'').trim();
+    if (window.innerWidth<900) closeSidebar();
+  });
+});
+
+document.getElementById('hamburger').addEventListener('click',()=>{
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebarOverlay').classList.toggle('show');
+});
+document.getElementById('sidebarOverlay').addEventListener('click',closeSidebar);
+function closeSidebar(){ document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebarOverlay').classList.remove('show'); }
+
+document.getElementById('logoutBtn').addEventListener('click',async()=>{ await signOut(auth); window.location.href='login.html'; });
+
+/* ─── Tickets ────────────────────────────────── */
+async function loadMyTickets() {
+  // Real-time listeners for student's tickets (by uid and/or studentId)
+  if (!currentUser) return;
+  // unsubscribe previous
+  if (ticketsUnsub && ticketsUnsub.length) ticketsUnsub.forEach(u=>u());
+  ticketsUnsub = [];
+  ticketQueryMaps = [];
+
+  const queries = [];
+  if (currentUser.uid) queries.push(query(collection(db,'tickets'), where('studentUid','==',currentUser.uid), orderBy('createdAt','desc')));
+  if (currentData?.studentId) queries.push(query(collection(db,'tickets'), where('studentId','==',currentData.studentId), orderBy('createdAt','desc')));
+
+  queries.forEach((q, idx) => {
+    ticketQueryMaps[idx] = new Map();
+    const unsub = onSnapshot(q, snap => {
+      const m = new Map();
+      snap.docs.forEach(d => m.set(d.id, { id: d.id, ...d.data() }));
+      ticketQueryMaps[idx] = m;
+      // merge maps
+      const seen = new Set();
+      const merged = [];
+      for (const mp of ticketQueryMaps) {
+        for (const [id, val] of mp) {
+          if (!seen.has(id)) { seen.add(id); merged.push(val); }
+        }
+      }
+      myTickets = merged.sort((a,b)=> (b.createdAt?.seconds||0) - (a.createdAt?.seconds||0));
+      renderTicketList();
+    }, err => { console.warn('ticket listener error', err); });
+    ticketsUnsub.push(unsub);
+  });
+}
+
+function renderTicketList() {
+  const el = document.getElementById('myTicketsList');
+  if (!myTickets.length){
+    el.innerHTML='<div class="card" style="text-align:center;color:var(--muted);padding:1.5rem;"><div style="font-size:2rem;margin-bottom:.4rem;">🎫</div><p style="font-size:.875rem;">No tickets yet.<br/>Open one if you need help.</p></div>';
+    return;
+  }
+  el.innerHTML = myTickets.map(t=>`
+    <div class="ticket-card ${t.id===selectedTicketId?'selected':''}" onclick="selectTicket('${t.id}')">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.3rem;">
+        <strong style="font-size:.9rem;">${esc(t.subject||'No Subject')}</strong>
+        ${ticketBadge(t.status)}
+      </div>
+      <div style="font-size:.78rem;color:var(--muted);">${esc(t.category||'General')} · ${t.createdAt?.toDate?t.createdAt.toDate().toLocaleDateString():t.createdAt?.seconds?new Date(t.createdAt.seconds*1000).toLocaleDateString():'—'}</div>
+    </div>`).join('');
+}
+
+window.selectTicket = (ticketId) => {
+  selectedTicketId = ticketId;
+  renderTicketList();
+  const t = myTickets.find(x=>x.id===ticketId);
+  document.getElementById('ticketChatPanel').style.display='flex';
+  document.getElementById('ticketChatPanel').style.flexDirection='column';
+  document.getElementById('ticketEmptyPanel').style.display='none';
+  document.getElementById('chatTicketSubject').textContent = t?.subject||'Ticket';
+  document.getElementById('chatTicketMeta').textContent    = `${t?.category||'General'} · ${t?.createdAt?.toDate?t.createdAt.toDate().toLocaleDateString():t?.createdAt?.seconds?new Date(t.createdAt.seconds*1000).toLocaleDateString():'—'}`;
+  document.getElementById('chatTicketStatus').innerHTML    = ticketBadge(t?.status);
+
+  // Disable input if resolved
+  const inputArea = document.getElementById('chatInputArea');
+  inputArea.style.display = t?.status==='Resolved' ? 'none' : 'flex';
+
+  if (chatUnsub) chatUnsub();
+  if (ticketDocUnsub) ticketDocUnsub();
+  const chatBox = document.getElementById('studentChatBox');
+  chatBox.innerHTML='<div class="spinner" style="width:22px;height:22px;border-width:3px;margin:1rem auto;"></div>';
+  chatUnsub = onSnapshot(
+    query(collection(db,'tickets',ticketId,'messages'), orderBy('createdAt','asc')),
+    snap=>{
+      if (snap.empty){ chatBox.innerHTML='<p style="text-align:center;color:var(--muted);font-size:.85rem;padding:1rem;">No messages yet. Describe your issue below.</p>'; return; }
+      chatBox.innerHTML = snap.docs.map(d=>{
+        const m=d.data();
+        const isMe = m.senderRole==='student';
+        const time = m.createdAt?.toDate?m.createdAt.toDate().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):m.createdAt?.seconds?new Date(m.createdAt.seconds*1000).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'';
+        return `<div class="c-msg ${isMe?'me':'other'}">
+          <div class="bubble">${esc(m.text||'')}</div>
+          <div class="meta">${isMe?'You':'Admin'} · ${time}</div>
+        </div>`;
+      }).join('');
+      chatBox.scrollTop=chatBox.scrollHeight;
+    }
+  );
+  ticketDocUnsub = onSnapshot(doc(db,'tickets',ticketId), snap => {
+    if (!snap.exists()) return;
+    const ticketData = snap.data();
+    document.getElementById('chatTicketStatus').innerHTML = ticketBadge(ticketData.status);
+    const inputArea = document.getElementById('chatInputArea');
+    inputArea.style.display = ticketData.status==='Resolved' ? 'none' : 'flex';
+    myTickets = myTickets.map(t => t.id===ticketId ? {...t, status: ticketData.status} : t);
+    renderTicketList();
+  });
+};
+
+window.sendStudentReply = async () => {
+  const text = document.getElementById('stuReplyInput').value.trim();
+  const ticket = myTickets.find(t => t.id===selectedTicketId);
+  if (!text||!selectedTicketId) return;
+  if (ticket?.status === 'Resolved') {
+    showToast('This ticket is resolved and cannot receive new replies.','error');
+    return;
+  }
+  document.getElementById('stuReplyInput').value='';
+  try {
+    await addDoc(collection(db,'tickets',selectedTicketId,'messages'),{
+      text, senderRole:'student',
+      senderName: currentData?.fullName||'Student',
+      createdAt: serverTimestamp()
+    });
+  } catch(err){ showToast('Failed to send: '+err.message,'error'); }
+};
+
+// Enter key to send
+document.getElementById('stuReplyInput').addEventListener('keydown', e=>{
+  if(e.key==='Enter') window.sendStudentReply();
+});
+
+/* ─── New Ticket ─────────────────────────────── */
+window.openNewTicket = () => {
+  document.getElementById('ticketSubject').value='';
+  document.getElementById('ticketCategory').value='Room Issue';
+  document.getElementById('ticketDesc').value='';
+  document.getElementById('newTicketAlert').innerHTML='';
+  openModal('newTicketModal');
+};
+
+window.submitTicket = async () => {
+  const alertEl = document.getElementById('newTicketAlert');
+  const subject  = document.getElementById('ticketSubject').value.trim();
+  const category = document.getElementById('ticketCategory').value;
+  const desc     = document.getElementById('ticketDesc').value.trim();
+  if (!subject||!desc){ alertEl.innerHTML='<div class="alert alert-error">⚠️ Please fill in subject and description.</div>'; return; }
+  const btn = document.getElementById('submitTicketBtn');
+  btn.disabled=true; btn.textContent='Submitting…';
+  try {
+    const ticketRef = await addDoc(collection(db,'tickets'),{
+      subject, category, description: desc,
+      status: 'Pending',
+      studentUid:  currentUser.uid,
+      studentId:   currentData?.studentId||'',
+      studentName: currentData?.fullName||'Student',
+      createdAt:   serverTimestamp()
+    });
+    // Save description as first message
+    await addDoc(collection(db,'tickets',ticketRef.id,'messages'),{
+      text: desc, senderRole:'student',
+      senderName: currentData?.fullName||'Student',
+      createdAt: serverTimestamp()
+    });
+    closeModal('newTicketModal');
+    await loadMyTickets();
+    window.selectTicket(ticketRef.id);
+    showToast('Ticket submitted!','success');
+  } catch(err){ alertEl.innerHTML=`<div class="alert alert-error">❌ ${err.message}</div>`; }
+  finally{ btn.disabled=false; btn.textContent='Submit Ticket'; }
+};
+
+/* ─── Change Password ─────────────────────────── */
+window.changeStuPassword = async () => {
+  const alertEl = document.getElementById('changePassAlert');
+  const p1 = document.getElementById('newPass1').value;
+  const p2 = document.getElementById('newPass2').value;
+  if(!p1||p1.length<6){ alertEl.innerHTML='<div class="alert alert-error">Password must be at least 6 characters.</div>'; return; }
+  if(p1!==p2){ alertEl.innerHTML='<div class="alert alert-error">Passwords do not match.</div>'; return; }
+  try {
+    await updatePassword(auth.currentUser, p1);
+    alertEl.innerHTML='<div class="alert alert-success">✅ Password updated successfully!</div>';
+    document.getElementById('newPass1').value='';
+    document.getElementById('newPass2').value='';
+  } catch(err){ alertEl.innerHTML=`<div class="alert alert-error">❌ ${err.message}</div>`; }
+};
+
+/* ─── Helpers ────────────────────────────────── */
+function openModal(id){ document.getElementById(id).classList.remove('hidden'); }
+function closeModal(id){ document.getElementById(id).classList.add('hidden'); }
+window.closeModal=closeModal;
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function ticketBadge(s){
+  if (!s) return '<span class="badge badge-gray">—</span>';
+  if (s === 'Pending') return '<span class="badge badge-blue">New</span>';
+  if (s === 'In Progress') return '<span class="badge badge-orange">In Progress</span>';
+  if (s === 'Resolved') return '<span class="badge badge-green">Completed</span>';
+  return `<span class="badge badge-gray">${esc(s)}</span>`;
+}
+function showToast(msg,type='success'){
+  let el=document.getElementById('globalToast');
+  if(!el){ el=document.createElement('div'); el.id='globalToast'; el.style.cssText='position:fixed;bottom:1.5rem;right:1.5rem;z-index:9999;min-width:240px;'; document.body.appendChild(el); }
+  el.innerHTML=`<div class="alert alert-${type}">${msg}</div>`;
+  setTimeout(()=>el.innerHTML='',4000);
+}
+window.showToast=showToast;
+</script>
+<style>
+  @media(max-width:700px){ .ticket-grid{grid-template-columns:1fr!important;} .profile-grid{grid-template-columns:1fr!important;} }
+</style>
+</body>
+</html>

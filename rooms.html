@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Rooms — ULK Student Hostel</title>
+<link rel="stylesheet" href="style.css" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+<header class="navbar">
+  <a class="logo" href="index.html">🏠 ULK <span>Hostel</span></a>
+  <button class="nav-toggle" id="navToggle" aria-label="Menu"><span></span><span></span><span></span></button>
+  <nav id="mainNav">
+    <a href="index.html">Home</a>
+    <a href="about.html">About</a>
+    <a href="rooms.html" class="active">Rooms</a>
+    <a href="contact.html">Contact</a>
+    <a href="login.html" class="btn btn-accent" style="padding:.4rem 1rem;border-radius:8px;">Login</a>
+  </nav>
+</header>
+
+<!-- PAGE HERO -->
+<div style="background:linear-gradient(135deg,var(--navy) 0%,#1565C0 100%);color:#fff;padding:4rem 2rem;text-align:center;">
+  <h1 style="font-size:clamp(1.8rem,4vw,2.6rem);font-weight:900;margin-bottom:.75rem;">Our <span style="color:var(--accent);">Room Types</span></h1>
+  <p style="color:rgba(255,255,255,.8);max-width:540px;margin:0 auto;">All rooms include high-speed WiFi. Choose the option that fits your lifestyle and budget.</p>
+</div>
+
+<!-- ROOMS -->
+<section class="section" style="max-width:1100px;margin:0 auto;">
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:2rem;margin-top:1rem;">
+
+    <!-- SINGLE -->
+    <div class="card" style="border-top:5px solid var(--blue);padding:0;overflow:hidden;">
+      <div style="background:var(--blue);color:#fff;padding:2rem 1.8rem;">
+        <div style="font-size:2.5rem;margin-bottom:.5rem;">🛏️</div>
+        <h2 style="font-size:1.5rem;font-weight:900;">Single Room</h2>
+        <div style="font-size:2rem;font-weight:900;color:var(--accent);margin-top:.5rem;">180,000 <span style="font-size:1rem;font-weight:400;color:rgba(255,255,255,.75);">RWF / month</span></div>
+      </div>
+      <div style="padding:1.8rem;">
+        <ul style="list-style:none;display:flex;flex-direction:column;gap:.75rem;">
+          <li style="display:flex;align-items:center;gap:.75rem;padding:.6rem 0;border-bottom:1px solid var(--bg);">
+            <span style="width:32px;height:32px;border-radius:50%;background:#e3f2fd;display:flex;align-items:center;justify-content:center;">👤</span>
+            <div><strong>1 Student</strong><div style="font-size:.8rem;color:var(--muted);">Fully private occupancy</div></div>
+          </li>
+          <li style="display:flex;align-items:center;gap:.75rem;padding:.6rem 0;border-bottom:1px solid var(--bg);">
+            <span style="width:32px;height:32px;border-radius:50%;background:#e8f5e9;display:flex;align-items:center;justify-content:center;">🚿</span>
+            <div><strong>Private Bathroom</strong><div style="font-size:.8rem;color:var(--muted);">Your own exclusive bathroom</div></div>
+          </li>
+          <li style="display:flex;align-items:center;gap:.75rem;padding:.6rem 0;border-bottom:1px solid var(--bg);">
+            <span style="width:32px;height:32px;border-radius:50%;background:#fff8e1;display:flex;align-items:center;justify-content:center;">📶</span>
+            <div><strong>WiFi Included</strong><div style="font-size:.8rem;color:var(--muted);">High-speed internet, no extra cost</div></div>
+          </li>
+          <li style="display:flex;align-items:center;gap:.75rem;padding:.6rem 0;">
+            <span style="width:32px;height:32px;border-radius:50%;background:#fce4ec;display:flex;align-items:center;justify-content:center;">🔒</span>
+            <div><strong>Maximum Privacy</strong><div style="font-size:.8rem;color:var(--muted);">Perfect for focused studying</div></div>
+          </li>
+        </ul>
+        <div style="margin-top:1.5rem;padding:1rem;background:var(--bg);border-radius:var(--radius);">
+          <p style="font-size:.85rem;color:var(--muted);">Room assignment is handled by the hostel administration. Contact us to inquire about availability.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- DOUBLE -->
+    <div class="card" style="border-top:5px solid var(--accent);padding:0;overflow:hidden;">
+      <div style="background:var(--navy);color:#fff;padding:2rem 1.8rem;position:relative;">
+        <div style="position:absolute;top:1rem;right:1rem;background:var(--accent);color:var(--navy);font-size:.75rem;font-weight:800;padding:.25rem .65rem;border-radius:999px;">POPULAR</div>
+        <div style="font-size:2.5rem;margin-bottom:.5rem;">🛏️🛏️</div>
+        <h2 style="font-size:1.5rem;font-weight:900;">Double Room</h2>
+        <div style="font-size:2rem;font-weight:900;color:var(--accent);margin-top:.5rem;">90,000 <span style="font-size:1rem;font-weight:400;color:rgba(255,255,255,.75);">RWF / student / month</span></div>
+      </div>
+      <div style="padding:1.8rem;">
+        <ul style="list-style:none;display:flex;flex-direction:column;gap:.75rem;">
+          <li style="display:flex;align-items:center;gap:.75rem;padding:.6rem 0;border-bottom:1px solid var(--bg);">
+            <span style="width:32px;height:32px;border-radius:50%;background:#e3f2fd;display:flex;align-items:center;justify-content:center;">👥</span>
+            <div><strong>2 Students</strong><div style="font-size:.8rem;color:var(--muted);">Shared between 2 occupants</div></div>
+          </li>
+          <li style="display:flex;align-items:center;gap:.75rem;padding:.6rem 0;border-bottom:1px solid var(--bg);">
+            <span style="width:32px;height:32px;border-radius:50%;background:#e8f5e9;display:flex;align-items:center;justify-content:center;">🚿</span>
+            <div><strong>Shared Bathroom</strong><div style="font-size:.8rem;color:var(--muted);">Clean, shared between 2</div></div>
+          </li>
+          <li style="display:flex;align-items:center;gap:.75rem;padding:.6rem 0;border-bottom:1px solid var(--bg);">
+            <span style="width:32px;height:32px;border-radius:50%;background:#fff8e1;display:flex;align-items:center;justify-content:center;">📶</span>
+            <div><strong>WiFi Included</strong><div style="font-size:.8rem;color:var(--muted);">High-speed internet, no extra cost</div></div>
+          </li>
+          <li style="display:flex;align-items:center;gap:.75rem;padding:.6rem 0;">
+            <span style="width:32px;height:32px;border-radius:50%;background:#fff8e1;display:flex;align-items:center;justify-content:center;">💸</span>
+            <div><strong>Great Value</strong><div style="font-size:.8rem;color:var(--muted);">Save 50% vs single room</div></div>
+          </li>
+        </ul>
+        <div style="margin-top:1.5rem;padding:1rem;background:var(--bg);border-radius:var(--radius);">
+          <p style="font-size:.85rem;color:var(--muted);">Room assignment is handled by the hostel administration. Contact us to inquire about availability.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- QUAD -->
+    <div class="card" style="border-top:5px solid var(--green);padding:0;overflow:hidden;">
+      <div style="background:#1b5e20;color:#fff;padding:2rem 1.8rem;">
+        <div style="font-size:2.5rem;margin-bottom:.5rem;">🛏️🛏️🛏️🛏️</div>
+        <h2 style="font-size:1.5rem;font-weight:900;">Quad Room</h2>
+        <div style="font-size:2rem;font-weight:900;color:var(--accent);margin-top:.5rem;">50,000 <span style="font-size:1rem;font-weight:400;color:rgba(255,255,255,.75);">RWF / student / month</span></div>
+      </div>
+      <div style="padding:1.8rem;">
+        <ul style="list-style:none;display:flex;flex-direction:column;gap:.75rem;">
+          <li style="display:flex;align-items:center;gap:.75rem;padding:.6rem 0;border-bottom:1px solid var(--bg);">
+            <span style="width:32px;height:32px;border-radius:50%;background:#e3f2fd;display:flex;align-items:center;justify-content:center;">👥</span>
+            <div><strong>4 Students</strong><div style="font-size:.8rem;color:var(--muted);">Shared between 4 occupants</div></div>
+          </li>
+          <li style="display:flex;align-items:center;gap:.75rem;padding:.6rem 0;border-bottom:1px solid var(--bg);">
+            <span style="width:32px;height:32px;border-radius:50%;background:#e8f5e9;display:flex;align-items:center;justify-content:center;">🚿</span>
+            <div><strong>Shared Bathroom</strong><div style="font-size:.8rem;color:var(--muted);">Clean, shared between 4</div></div>
+          </li>
+          <li style="display:flex;align-items:center;gap:.75rem;padding:.6rem 0;border-bottom:1px solid var(--bg);">
+            <span style="width:32px;height:32px;border-radius:50%;background:#fff8e1;display:flex;align-items:center;justify-content:center;">📶</span>
+            <div><strong>WiFi Included</strong><div style="font-size:.8rem;color:var(--muted);">High-speed internet, no extra cost</div></div>
+          </li>
+          <li style="display:flex;align-items:center;gap:.75rem;padding:.6rem 0;">
+            <span style="width:32px;height:32px;border-radius:50%;background:#e8f5e9;display:flex;align-items:center;justify-content:center;">💰</span>
+            <div><strong>Most Affordable</strong><div style="font-size:.8rem;color:var(--muted);">Best budget option</div></div>
+          </li>
+        </ul>
+        <div style="margin-top:1.5rem;padding:1rem;background:var(--bg);border-radius:var(--radius);">
+          <p style="font-size:.85rem;color:var(--muted);">Room assignment is handled by the hostel administration. Contact us to inquire about availability.</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- COMPARISON TABLE -->
+<section class="section" style="max-width:900px;margin:0 auto;padding-top:0;">
+  <h2 class="section-title">Quick <span>Comparison</span></h2>
+  <div class="card" style="margin-top:1.5rem;">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Feature</th>
+            <th>Single</th>
+            <th>Double</th>
+            <th>Quad</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Price / Month</td><td>180,000 RWF</td><td>90,000 RWF</td><td>50,000 RWF</td></tr>
+          <tr><td>Occupants</td><td>1</td><td>2</td><td>4</td></tr>
+          <tr><td>Bathroom</td><td>✅ Private</td><td>Shared</td><td>Shared</td></tr>
+          <tr><td>WiFi</td><td>✅ Included</td><td>✅ Included</td><td>✅ Included</td></tr>
+          <tr><td>Privacy Level</td><td>⭐⭐⭐</td><td>⭐⭐</td><td>⭐</td></tr>
+          <tr><td>Cost Savings</td><td>—</td><td>50% vs Single</td><td>72% vs Single</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="section section-alt" style="text-align:center;">
+  <h2 style="color:#fff;font-size:1.8rem;font-weight:800;margin-bottom:.75rem;">Interested in a Room?</h2>
+  <p style="color:rgba(255,255,255,.75);margin-bottom:1.5rem;">Room assignments are made by our administration team. Reach out to learn more.</p>
+  <a href="contact.html" class="btn btn-accent" style="font-size:1rem;padding:.75rem 2rem;">Contact Us</a>
+</section>
+
+<footer>
+  <p>© 2025 ULK Student Hostel &nbsp;|&nbsp; <a href="contact.html">Contact Us</a> &nbsp;|&nbsp; <a href="login.html">Staff Login</a></p>
+</footer>
+
+<script>
+  document.getElementById('navToggle').addEventListener('click',()=>{document.getElementById('mainNav').classList.toggle('open');});
+</script>
+</body>
+</html>

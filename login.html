@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Login — ULK Student Hostel</title>
+<link rel="stylesheet" href="style.css" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+<div class="login-page">
+  <div class="login-card">
+    <div class="logo-block">
+      <span class="logo-icon">🏠</span>
+      <h1>ULK Student Hostel</h1>
+      <p>Sign in to your account</p>
+    </div>
+
+    <div id="loginAlert"></div>
+
+    <div class="form-group">
+      <label for="loginId">Student ID</label>
+      <input type="text" id="loginId" class="form-control" placeholder="e.g. 2025001" autocomplete="username" />
+    </div>
+
+    <div class="form-group">
+      <label for="loginPassword">Password</label>
+      <div class="pass-toggle">
+        <input type="password" id="loginPassword" class="form-control" placeholder="••••••••" autocomplete="current-password" />
+        <button type="button" id="togglePass" aria-label="Toggle password">👁️</button>
+      </div>
+    </div>
+
+    <button class="btn btn-primary" id="loginBtn" style="width:100%;justify-content:center;font-size:1rem;padding:.75rem;margin-top:.5rem;">
+      Sign In
+    </button>
+
+    <div style="margin-top:1.5rem;text-align:center;">
+      <a href="index.html" style="font-size:.85rem;color:var(--muted);">← Back to Home</a>
+    </div>
+  </div>
+</div>
+
+<!-- Spinner overlay -->
+<div class="loading-overlay hidden" id="loadingOverlay">
+  <div>
+    <div class="spinner"></div>
+    <p style="text-align:center;color:var(--muted);margin-top:.5rem;">Signing in…</p>
+  </div>
+</div>
+
+<script type="module">
+import {
+  auth, ensureAdminExists, onAuthStateChanged,
+  findUserByUid, findUserByEmail, loginWithFirestore,
+  signOut
+} from './firebase.js?v=20260629';
+
+const idEl     = document.getElementById('loginId');
+const passEl   = document.getElementById('loginPassword');
+const alertEl  = document.getElementById('loginAlert');
+const btnEl    = document.getElementById('loginBtn');
+const overlay  = document.getElementById('loadingOverlay');
+
+// Bootstrap admin silently
+ensureAdminExists().catch(()=>{});
+
+// Keep the login page available so a student can sign in even if another account
+// was previously signed in from the same browser.
+onAuthStateChanged(auth, async (user) => {
+  if (!user) return;
+  try {
+    const profile = await findUserByUid(user.uid) || await findUserByEmail(user.email).catch(()=>null);
+    if (profile && profile.role !== 'student') {
+      redirect(profile.role);
+    }
+  } catch (_) {}
+});
+
+function redirect(role) {
+  if (role === 'admin' || role === 'superadmin') return window.location.href = 'admin-dashboard.html';
+  return window.location.href = 'student-dashboard.html';
+}
+
+function showAlert(msg, type='error') {
+  alertEl.innerHTML = `<div class="alert alert-${type}">${msg}</div>`;
+}
+
+// Toggle password visibility
+document.getElementById('togglePass').addEventListener('click', () => {
+  passEl.type = passEl.type === 'password' ? 'text' : 'password';
+});
+
+// Enter key
+[idEl, passEl].forEach(el => el.addEventListener('keydown', e => {
+  if (e.key === 'Enter') doLogin();
+}));
+
+btnEl.addEventListener('click', doLogin);
+
+async function doLogin() {
+  const studentId = idEl.value.trim();
+  const pass = passEl.value;
+
+  if (!studentId || !pass) {
+    showAlert('⚠️ Please enter your Student ID and password.');
+    return;
+  }
+
+  btnEl.disabled = true;
+  overlay.classList.remove('hidden');
+  alertEl.innerHTML = '';
+
+  try {
+    if (auth.currentUser) {
+      await signOut(auth);
+    }
+    const profile = await loginWithFirestore(studentId, pass);
+    if (!profile) {
+      showAlert('❌ Account not found. Contact admin.');
+      return;
+    }
+
+    sessionStorage.setItem('userRole', profile.role || 'admin');
+    sessionStorage.setItem('userId', profile.studentId || profile.id || profile.uid);
+    sessionStorage.setItem('userProfile', JSON.stringify({
+      ...profile,
+      uid: profile.uid || profile.id || profile.studentId || null
+    }));
+
+    if (profile.role === 'student') {
+      window.location.href = 'student-dashboard.html';
+    } else {
+      window.location.href = 'admin-dashboard.html';
+    }
+  } catch (err) {
+    console.warn('login failed', err);
+    let msg = '❌ Sign in failed. Please check your credentials.';
+    if (err?.code === 'auth/user-not-found') msg = '❌ No account found with that Student ID.';
+    if (err?.code === 'auth/wrong-password' || err?.code === 'auth/invalid-credential') msg = '❌ Incorrect password. Try again.';
+    if (err?.code === 'auth/too-many-requests') msg = '⚠️ Too many attempts. Please wait and try again.';
+    if (err?.message?.includes('Cloud Functions not available')) msg = '⚠️ The admin service is not available right now. Please try again in a moment.';
+    showAlert(msg);
+  } finally {
+    btnEl.disabled = false;
+    overlay.classList.add('hidden');
+  }
+}
+</script>
+</body>
+</html>

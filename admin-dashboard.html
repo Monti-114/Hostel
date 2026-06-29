@@ -1,0 +1,1598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Admin Dashboard — ULK Hostel</title>
+<link rel="stylesheet" href="style.css"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+<style>
+  .ticket-thread{display:flex;flex-direction:column;gap:.5rem;max-height:300px;overflow-y:auto;padding:.75rem;background:#f8fafc;border:1px solid var(--border);border-radius:var(--radius);margin-bottom:.75rem;}
+  .t-msg{padding:.55rem .8rem;border-radius:10px;max-width:85%;font-size:.875rem;line-height:1.5;}
+  .t-msg.admin{background:var(--blue);color:#fff;align-self:flex-end;border-bottom-right-radius:3px;}
+  .t-msg.student{background:var(--surface);border:1px solid var(--border);align-self:flex-start;border-bottom-left-radius:3px;}
+  .t-meta{font-size:.7rem;color:var(--muted);margin-top:.15rem;}
+  .t-msg.admin .t-meta{color:rgba(255,255,255,.7);text-align:right;}
+</style>
+</head>
+<body>
+
+<div id="loadingOverlay" class="loading-overlay"><div><div class="spinner"></div><p style="text-align:center;color:var(--muted);margin-top:.5rem;">Loading…</p></div></div>
+
+<div class="dash-layout" id="dashLayout" style="display:none;">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">🏠 ULK <span>Admin</span></div>
+    <div class="sidebar-user">
+      <div class="avatar" id="adminAvatar">A</div>
+      <div class="user-info">
+        <div class="name" id="adminName">Administrator</div>
+        <div class="role">Admin</div>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">Overview</div>
+      <a href="#" class="active" data-section="dashboard">📊 Dashboard</a>
+      <div class="nav-section">Management</div>
+      <a href="#" data-section="students">👥 Students</a>
+      <a href="#" data-section="rooms">🏠 Rooms</a>
+      <a href="#" data-section="payments">💳 Payments</a>
+      <div class="nav-section">Support</div>
+      <a href="#" data-section="tickets">🎫 Tickets <span class="badge badge-red" id="pendingTicketsBadge" style="display:none;"></span></a>
+      <a href="#" data-section="messages">📩 Messages <span class="badge badge-blue" id="unreadMsgBadge" style="display:none;"></span></a>
+      <div class="nav-section">System</div>
+      <a href="#" data-section="admins">🔑 Admins</a>
+      <a href="#" data-section="settings">⚙️ Settings</a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="btn btn-danger" style="width:100%;justify-content:center;" id="logoutBtn">🚪 Logout</button>
+    </div>
+  </aside>
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <!-- MAIN -->
+  <main class="dash-main">
+    <div class="dash-topbar">
+      <button class="hamburger" id="hamburger">☰</button>
+      <span class="topbar-title" id="topbarTitle">Dashboard</span>
+      <span style="font-size:.85rem;color:var(--muted);" id="topbarDate"></span>
+    </div>
+
+    <div class="dash-content">
+
+      <!-- ══ DASHBOARD ══ -->
+      <div class="dash-section active" id="sec-dashboard">
+        <div class="section-card" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem;">
+          <div class="section-heading">Dashboard Overview</div>
+          <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;">
+            <button class="btn btn-outline" onclick="exportStudentsXLSX()">Export Students XLSX</button>
+            <button class="btn btn-outline" onclick="exportPaymentsXLSX()">Export Payments XLSX</button>
+            <button class="btn btn-outline" onclick="exportTicketsXLSX()">Export Tickets XLSX</button>
+            <label style="display:flex;align-items:center;gap:.5rem;margin-left:.25rem;">
+              <input type="file" id="studentsXlsxInput" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleStudentsXlsxFile(event)" />
+              <button class="btn btn-outline" onclick="document.getElementById('studentsXlsxInput').click()">Import Students (Excel)</button>
+            </label>
+          </div>
+        </div>
+        <div class="stats-grid" id="statsGrid">
+          <div class="stat-card"><div class="stat-icon">👥</div><div><div class="stat-val" id="statStudents">—</div><div class="stat-lbl">Total Students</div></div></div>
+          <div class="stat-card green"><div class="stat-icon">🔑</div><div><div class="stat-val" id="statAdmins">—</div><div class="stat-lbl">Total Admins</div></div></div>
+          <div class="stat-card yellow"><div class="stat-icon">🏠</div><div><div class="stat-val" id="statOccupied">—</div><div class="stat-lbl">Occupied Rooms</div></div></div>
+          <div class="stat-card"><div class="stat-icon">🛏️</div><div><div class="stat-val" id="statAvailable">—</div><div class="stat-lbl">Available Rooms</div></div></div>
+          <div class="stat-card red"><div class="stat-icon">⚠️</div><div><div class="stat-val" id="statOverdue">—</div><div class="stat-lbl">Overdue Payments</div></div></div>
+          <div class="stat-card yellow"><div class="stat-icon">🎫</div><div><div class="stat-val" id="statPendingT">—</div><div class="stat-lbl">Pending Tickets</div></div></div>
+          <div class="stat-card green"><div class="stat-icon">✅</div><div><div class="stat-val" id="statResolvedT">—</div><div class="stat-lbl">Resolved Tickets</div></div></div>
+          <div class="stat-card" style="background:linear-gradient(135deg,#667eea,#764ba2);"><div class="stat-icon" style="color:#fff;">💰</div><div style="color:#fff;"><div class="stat-val" id="statMonthlyRevenue" style="color:#fff;">—</div><div class="stat-lbl" style="color:rgba(255,255,255,.8);">Monthly Revenue</div></div></div>
+        </div>
+        <div class="card mt-3">
+          <div class="card-header"><h3>📋 Recent Students</h3></div>
+          <div class="table-wrap"><table id="recentStudentsTable"><thead><tr><th>ID</th><th>Name</th><th>Room</th><th>Payment</th><th>Due Date</th></tr></thead><tbody id="recentStudentsTbody"></tbody></table></div>
+        </div>
+      </div>
+      </div>
+
+      <!-- ══ STUDENTS ══ -->
+      <div class="dash-section" id="sec-students">
+        <div class="section-card">
+          <div class="section-heading">Student Management</div>
+        <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-bottom:1rem;align-items:center;">
+          <div class="search-bar" style="flex:1;min-width:220px;">
+            <span class="search-icon">🔍</span>
+            <input type="text" class="form-control" id="studentSearch" placeholder="Search by name, ID, or email…" oninput="filterStudents()" />
+          </div>
+          <select class="form-control" style="width:auto;" id="filterPayment" onchange="filterStudents()">
+            <option value="">All Payment Status</option>
+            <option value="Paid">Paid</option>
+            <option value="Pending">Pending</option>
+            <option value="Overdue">Overdue</option>
+          </select>
+          <button class="btn btn-primary" onclick="openAddStudent()">➕ Add Student</button>
+        </div>
+        <div class="card">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Phone</th><th>Room</th><th>Payment</th><th>Due Date</th><th>Actions</th></tr></thead>
+              <tbody id="studentsTbody"></tbody>
+            </table>
+          </div>
+          <div class="pagination" id="studentPagination"></div>
+        </div>
+      </div>
+      </div>
+
+      <!-- ══ ROOMS ══ -->
+      <div class="dash-section" id="sec-rooms">
+        <div class="section-card">
+          <div class="section-heading">Room Management</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1rem;margin-bottom:1.5rem;">
+          <div class="card" style="border-top:4px solid var(--blue);">
+            <h4>Single Rooms</h4>
+            <div style="font-size:.85rem;color:var(--muted);margin:.5rem 0;">180,000 RWF/month · 1 student · Private Bath</div>
+            <div>Occupied: <strong id="singleOcc">—</strong></div>
+          </div>
+          <div class="card" style="border-top:4px solid var(--accent);">
+            <h4>Double Rooms</h4>
+            <div style="font-size:.85rem;color:var(--muted);margin:.5rem 0;">90,000 RWF/student · 2 students · Shared Bath</div>
+            <div>Occupied: <strong id="doubleOcc">—</strong></div>
+          </div>
+          <div class="card" style="border-top:4px solid var(--green);">
+            <h4>Quad Rooms</h4>
+            <div style="font-size:.85rem;color:var(--muted);margin:.5rem 0;">50,000 RWF/student · 4 students · Shared Bath</div>
+            <div>Occupied: <strong id="quadOcc">—</strong></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h3>Students by Room Type</h3></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Student ID</th><th>Name</th><th>Room Type</th><th>Payment</th><th>Actions</th></tr></thead>
+              <tbody id="roomsTbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      </div>
+
+      <!-- ══ PAYMENTS ══ -->
+      <div class="dash-section" id="sec-payments">
+        <div class="section-card">
+          <div class="section-heading">Payment Management</div>
+        <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-bottom:1rem;align-items:center;">
+          <div class="search-bar" style="flex:1;min-width:220px;">
+            <span class="search-icon">🔍</span>
+            <input type="text" class="form-control" id="paySearch" placeholder="Search student…" oninput="filterPayments()" />
+          </div>
+          <select class="form-control" style="width:auto;" id="filterPayStatus" onchange="filterPayments()">
+            <option value="">All Status</option>
+            <option>Paid</option><option>Pending</option><option>Overdue</option>
+          </select>
+        </div>
+        <div class="card">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>ID</th><th>Name</th><th>Room</th><th>Amount</th><th>Status</th><th>Due Date</th><th>Actions</th></tr></thead>
+              <tbody id="paymentsTbody"></tbody>
+            </table>
+          </div>
+          <div class="pagination" id="paymentsPagination"></div>
+        </div>
+      </div>
+      </div>
+
+      <!-- ══ TICKETS ══ -->
+      <div class="dash-section" id="sec-tickets">
+        <div class="section-card">
+          <div class="section-heading">Ticket Management</div>
+        <div style="display:grid;grid-template-columns:1fr auto;gap:1rem;margin-bottom:1rem;align-items:center;">
+          <div style="display:flex;gap:.75rem;flex-wrap:wrap;align-items:center;">
+            <div class="search-bar" style="flex:1;min-width:200px;">
+              <span class="search-icon">🔍</span>
+              <input type="text" class="form-control" id="ticketSearch" placeholder="Search tickets…" oninput="filterTickets()" />
+            </div>
+            <select class="form-control" style="width:auto;" id="filterTicketStatus" onchange="filterTickets()">
+              <option value="">All Status</option>
+              <option value="Pending">New</option><option value="In Progress">In Progress</option><option value="Resolved">Completed</option>
+            </select>
+          </div>
+          <div style="display:flex;gap:.5rem;flex-wrap:wrap;justify-content:flex-end;">
+            <button class="btn btn-outline" onclick="exportTicketsXLSX()">Export Tickets XLSX</button>
+            <button class="btn btn-outline" onclick="exportTicketsXLSX(ticketStatusFilter)">Export Current Status</button>
+          </div>
+        </div>
+        <div class="ticket-status-tabs" style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1rem;">
+          <button class="btn btn-sm btn-outline active" id="ticketStatusTabAll" onclick="setTicketFilter('')">All</button>
+          <button class="btn btn-sm btn-outline" id="ticketStatusTabPending" onclick="setTicketFilter('Pending')">New</button>
+          <button class="btn btn-sm btn-outline" id="ticketStatusTabProgress" onclick="setTicketFilter('In Progress')">In Progress</button>
+          <button class="btn btn-sm btn-outline" id="ticketStatusTabResolved" onclick="setTicketFilter('Resolved')">Completed</button>
+        </div>
+        <div class="card">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>ID</th><th>Student</th><th>Subject</th><th>Status</th><th>Created</th><th>Actions</th></tr></thead>
+              <tbody id="ticketsTbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      </div>
+
+      <!-- ══ MESSAGES ══ -->
+      <div class="dash-section" id="sec-messages">
+        <div class="section-card">
+          <div class="section-heading">Contact Messages</div>
+        <div class="card">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Name</th><th>Email</th><th>Subject</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead>
+              <tbody id="messagesTbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      </div>
+
+      <!-- ══ ADMINS ══ -->
+      <div class="dash-section" id="sec-admins">
+        <div class="section-card">
+          <div class="section-heading">Admin Management</div>
+        <div style="margin-bottom:1rem;">
+          <button class="btn btn-primary" onclick="openAddAdmin()">➕ Create Admin</button>
+        </div>
+        <div class="card">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Created</th><th>Actions</th></tr></thead>
+              <tbody id="adminsTbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      </div>
+
+      <!-- ══ SETTINGS ══ -->
+      <div class="dash-section" id="sec-settings">
+        <div class="section-card">
+          <div class="section-heading">Settings</div>
+        <div class="card" style="max-width:500px;">
+          <h3 style="margin-bottom:1rem;">Change Your Password</h3>
+          <div id="settingsAlert"></div>
+          <div class="form-group">
+            <label>New Password</label>
+            <input type="password" class="form-control" id="newAdminPass" placeholder="Min. 6 characters" />
+          </div>
+          <div class="form-group">
+            <label>Confirm New Password</label>
+            <input type="password" class="form-control" id="confirmAdminPass" placeholder="Repeat new password" />
+          </div>
+          <button class="btn btn-primary" onclick="changeAdminPassword()">💾 Update Password</button>
+        </div>
+      </div>
+      </div>
+
+    </div><!-- /dash-content -->
+  </main>
+</div><!-- /dash-layout -->
+
+<!-- ═══════════════ MODALS ═══════════════ -->
+
+<!-- Add/Edit Student -->
+<div class="modal-overlay hidden" id="studentModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="studentModalTitle">Add Student</h3>
+      <button class="modal-close" onclick="closeModal('studentModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="studentModalAlert"></div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Student ID *</label>
+          <input type="text" class="form-control" id="sId" placeholder="e.g. 2025001" />
+        </div>
+        <div class="form-group">
+          <label>Full Name *</label>
+          <input type="text" class="form-control" id="sName" placeholder="Full name" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Email *</label>
+        <input type="email" class="form-control" id="sEmail" placeholder="student@ulk.ac.rw" />
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Password *</label>
+          <input type="password" class="form-control" id="sPass" placeholder="Min. 6 chars" />
+        </div>
+        <div class="form-group">
+          <label>Phone</label>
+          <input type="tel" class="form-control" id="sPhone" placeholder="07XXXXXXXX" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Gender</label>
+          <select class="form-control" id="sGender">
+            <option value="">Select</option>
+            <option>Male</option><option>Female</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Room Type</label>
+          <select class="form-control" id="sRoomType">
+            <option value="">Select room</option>
+            <option value="single">Single Room — 180,000 RWF</option>
+            <option value="double">Double Room — 90,000 RWF</option>
+            <option value="quad">Quad Room — 50,000 RWF</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Hostel</label>
+          <select class="form-control" id="sHostel">
+            <option value="">Select hostel</option>
+            <option value="female">Women Hostel</option>
+            <option value="male">Men Hostel</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Floor</label>
+          <select class="form-control" id="sFloor">
+            <option value="">Select floor</option>
+            <option value="GF">GF</option>
+            <option value="F1">F1</option>
+            <option value="F2">F2</option>
+            <option value="F3">F3</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Room Number</label>
+          <input type="text" class="form-control" id="sRoomNumber" placeholder="DO01" />
+        </div>
+        <div class="form-group">
+          <label>Room Code Preview</label>
+          <input type="text" class="form-control" id="sRoomCodePreview" placeholder="GF-DO01" readonly />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Payment Status</label>
+          <select class="form-control" id="sPayStatus">
+            <option>Pending</option><option>Paid</option><option>Overdue</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Due Date</label>
+          <input type="date" class="form-control" id="sDueDate" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Notes</label>
+        <textarea class="form-control" id="sNotes" rows="3" placeholder="Optional notes…"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('studentModal')">Cancel</button>
+      <button class="btn btn-primary" id="studentSaveBtn" onclick="saveStudent()">Save Student</button>
+    </div>
+  </div>
+</div>
+
+<!-- Change Password Modal -->
+<div class="modal-overlay hidden" id="changePassModal">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-header">
+      <h3>Change Student Password</h3>
+      <button class="modal-close" onclick="closeModal('changePassModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="changePassAlert"></div>
+      <p style="font-size:.875rem;color:var(--muted);margin-bottom:1rem;">Setting new password for: <strong id="changePassStudentName"></strong></p>
+      <div class="form-group">
+        <label>New Password</label>
+        <input type="password" class="form-control" id="newStudentPass" placeholder="Min. 6 characters" />
+      </div>
+      <div class="form-group">
+        <label>Confirm Password</label>
+        <input type="password" class="form-control" id="confirmStudentPass" placeholder="Repeat password" />
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('changePassModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="doChangeStudentPass()">Update Password</button>
+    </div>
+  </div>
+</div>
+
+<!-- Payment Edit Modal -->
+<div class="modal-overlay hidden" id="paymentModal">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-header">
+      <h3>Update Payment</h3>
+      <button class="modal-close" onclick="closeModal('paymentModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="paymentModalAlert"></div>
+      <p style="font-size:.875rem;color:var(--muted);margin-bottom:1rem;">Editing: <strong id="payStudentName"></strong></p>
+      <div class="form-group">
+        <label>Payment Status</label>
+        <select class="form-control" id="payStatus">
+          <option>Paid</option><option>Pending</option><option>Overdue</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Due Date</label>
+        <input type="date" class="form-control" id="payDueDate" />
+      </div>
+      <div class="form-group">
+        <label>Notes</label>
+        <textarea class="form-control" id="payNotes" rows="3"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('paymentModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="savePayment()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- Ticket Modal -->
+<div class="modal-overlay hidden" id="ticketModal">
+  <div class="modal" style="max-width:580px;">
+    <div class="modal-header">
+      <h3 id="ticketModalTitle">Ticket Details</h3>
+      <button class="modal-close" onclick="closeModal('ticketModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="ticketModalMeta" style="margin-bottom:1rem;display:grid;grid-template-columns:1fr 1fr;gap:.5rem;font-size:.875rem;"></div>
+      <div class="form-group">
+        <label>Status</label>
+        <select class="form-control" id="ticketStatusSel">
+          <option value="Pending">New</option><option value="In Progress">In Progress</option><option value="Resolved">Completed</option>
+        </select>
+      </div>
+      <label style="font-size:.85rem;font-weight:600;display:block;margin-bottom:.4rem;">Conversation</label>
+      <div class="ticket-thread" id="adminChatBox"></div>
+      <div class="chat-input-row" id="adminChatInputRow">
+        <input type="text" class="form-control" id="adminReplyInput" placeholder="Type a reply…" />
+        <button class="btn btn-primary" id="adminReplyBtn" onclick="sendAdminReply()">Send</button>
+      </div>
+    </div>
+    <div class="modal-footer" style="display:flex;gap:.5rem;flex-wrap:wrap;justify-content:flex-end;">
+      <button class="btn btn-accent" id="ticketNewBtn" onclick="setTicketStatusFast('Pending')">New</button>
+      <button class="btn btn-outline" id="ticketProgressBtn" onclick="setTicketStatusFast('In Progress')">In Progress</button>
+      <button class="btn btn-success" id="ticketCompletedBtn" onclick="setTicketStatusFast('Resolved')">Completed</button>
+      <button class="btn btn-danger" onclick="confirmDelete('Delete this ticket and all messages? This cannot be undone.', ()=>deleteTicket(currentTicketId))">Delete</button>
+      <button class="btn btn-outline" onclick="closeModal('ticketModal')">Close</button>
+      <button class="btn btn-primary" onclick="saveTicketStatus()">Save Status</button>
+    </div>
+  </div>
+</div>
+
+<!-- Message View Modal -->
+<div class="modal-overlay hidden" id="messageModal">
+  <div class="modal" style="max-width:500px;">
+    <div class="modal-header">
+      <h3>Message Details</h3>
+      <button class="modal-close" onclick="closeModal('messageModal')">×</button>
+    </div>
+    <div class="modal-body" id="messageModalBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('messageModal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Admin Modal -->
+<div class="modal-overlay hidden" id="adminModal">
+  <div class="modal" style="max-width:440px;">
+    <div class="modal-header">
+      <h3 id="adminModalTitle">Create Admin</h3>
+      <button class="modal-close" onclick="closeModal('adminModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="adminModalAlert"></div>
+      <div class="form-group"><label>Student ID</label><input type="text" class="form-control" id="aId" placeholder="Admin ID"/></div>
+      <div class="form-group"><label>Full Name</label><input type="text" class="form-control" id="aName" placeholder="Full name"/></div>
+      <div class="form-group"><label>Email</label><input type="email" class="form-control" id="aEmail" placeholder="admin@email.com"/></div>
+      <div class="form-group"><label>Password</label><input type="password" class="form-control" id="aPass" placeholder="Min. 6 chars"/></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('adminModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveAdmin()">Create Admin</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirm -->
+<div class="modal-overlay hidden" id="deleteModal">
+  <div class="modal" style="max-width:380px;">
+    <div class="modal-header">
+      <h3>Confirm Delete</h3>
+      <button class="modal-close" onclick="closeModal('deleteModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <p id="deleteModalMsg">Are you sure you want to delete this record? This action cannot be undone.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('deleteModal')">Cancel</button>
+      <button class="btn btn-danger" id="deleteConfirmBtn">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import {
+  auth, db, ensureAdminExists,
+  signOut, onAuthStateChanged, updatePassword,
+  doc, getDoc, getDocs, addDoc, updateDoc, deleteDoc, writeBatch,
+  collection, query, where, orderBy, onSnapshot, serverTimestamp,
+  createStudent, getUserById, getAllStudents, updateStudent, deleteStudent,
+  adminResetStudentPassword, adminPromoteToAdmin,
+  getRooms, updateRoom, deleteRoom,
+  getPaymentsForStudent, createPayment, updatePayment,
+  ROOM_TYPES
+} from './firebase.js?v=20260629';
+
+/* ─── State ─────────────────────────────────── */
+let allStudents = [], allTickets = [], allMessages = [], allAdmins = [];
+let filteredStudents = [], filteredPayments = [], filteredTickets = [];
+let ticketStatusFilter = '';
+let currentPage = { students:1, payments:1 };
+const PAGE_SIZE = 10;
+let editingStudentId = null;
+let editingPaymentId = null;
+let currentTicketId  = null;
+let currentTicketUnsub = null;
+let currentTicketDocUnsub = null;
+let currentTicketsUnsub = null;
+let deleteCallback   = null;
+let currentAdminUid  = null;
+let currentAdminData = null;
+
+/* ─── Auth Guard ─────────────────────────────── */
+ensureAdminExists().catch(()=>{});
+
+onAuthStateChanged(auth, async (user) => {
+  if (!user) {
+    const fallbackRole = sessionStorage.getItem('userRole');
+    if (fallbackRole === 'admin' || fallbackRole === 'superadmin') {
+      currentAdminUid = sessionStorage.getItem('userId') || 'local-admin';
+      currentAdminData = { fullName: 'Administrator', role: fallbackRole || 'admin' };
+      document.getElementById('adminName').textContent = 'Administrator';
+      document.getElementById('adminAvatar').textContent = 'A';
+      document.getElementById('loadingOverlay').classList.add('hidden');
+      document.getElementById('dashLayout').style.display = 'flex';
+      initDash();
+      return;
+    }
+    window.location.href = 'login.html';
+    return;
+  }
+
+  currentAdminUid = user.uid;
+  currentAdminData = {
+    fullName: user.displayName || user.email || 'Administrator',
+    role: sessionStorage.getItem('userRole') || 'admin'
+  };
+  document.getElementById('adminName').textContent = currentAdminData.fullName || 'Administrator';
+  document.getElementById('adminAvatar').textContent = (currentAdminData.fullName || 'A')[0].toUpperCase();
+  document.getElementById('loadingOverlay').classList.add('hidden');
+  document.getElementById('dashLayout').style.display = 'flex';
+  initDash();
+
+  getUserData(user.uid).then(snap => {
+    if (!snap || (snap.role !== 'admin' && snap.role !== 'superadmin')) {
+      return;
+    }
+    currentAdminData = snap;
+    document.getElementById('adminName').textContent = snap.fullName || 'Admin';
+    document.getElementById('adminAvatar').textContent = (snap.fullName || 'A')[0].toUpperCase();
+  }).catch(err => console.warn('admin profile lookup failed', err));
+});
+
+async function getUserData(uid) {
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => resolve(null), 2200);
+    (async () => {
+      try {
+        const q = query(collection(db,'users'), where('uid','==',uid));
+        const snap = await getDocs(q);
+        if (!snap.empty) {
+          resolve({ id: snap.docs[0].id, ...snap.docs[0].data() });
+        } else {
+          resolve(null);
+        }
+      } catch (err) {
+        console.warn('getUserData failed', err);
+        resolve(null);
+      } finally {
+        clearTimeout(timer);
+      }
+    })();
+  });
+}
+
+/* ─── Init ───────────────────────────────────── */
+function initDash() {
+  document.getElementById('topbarDate').textContent = new Date().toLocaleDateString('en-US',{weekday:'short',year:'numeric',month:'short',day:'numeric'});
+  loadStudents();
+  loadTickets();
+  loadMessages();
+  loadAdmins();
+}
+
+/* ─── Navigation ─────────────────────────────── */
+document.querySelectorAll('.sidebar-nav a[data-section]').forEach(a => {
+  a.addEventListener('click', e => {
+    e.preventDefault();
+    const sec = a.dataset.section;
+    document.querySelectorAll('.sidebar-nav a').forEach(x=>x.classList.remove('active'));
+    a.classList.add('active');
+    document.querySelectorAll('.dash-section').forEach(s=>s.classList.remove('active'));
+    document.getElementById('sec-'+sec).classList.add('active');
+    document.getElementById('topbarTitle').textContent = a.textContent.replace(/[🎫📩📊👥🏠💳🔑⚙️]/g,'').trim();
+    if (window.innerWidth < 900) closeSidebar();
+  });
+});
+
+document.getElementById('hamburger').addEventListener('click',()=>{
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebarOverlay').classList.toggle('show');
+});
+document.getElementById('sidebarOverlay').addEventListener('click', closeSidebar);
+function closeSidebar(){
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebarOverlay').classList.remove('show');
+}
+
+document.getElementById('logoutBtn').addEventListener('click', async ()=>{
+  try {
+    await signOut(auth);
+  } catch (err) {
+    console.warn('logout warning', err);
+  }
+  sessionStorage.removeItem('userRole');
+  sessionStorage.removeItem('userId');
+  window.location.href = 'login.html';
+});
+
+/* ─── Load Students ──────────────────────────── */
+async function loadStudents() {
+  try {
+    const snap = await getDocs(query(collection(db,'users'), where('role','==','student')));
+    allStudents = snap.docs.map(d=>({id:d.id,...d.data()}));
+  } catch (err) {
+    console.warn('loadStudents failed', err);
+    allStudents = [];
+  }
+  filteredStudents = [...allStudents];
+  filteredPayments = [...allStudents];
+  renderStudents();
+  renderPayments();
+  renderRooms();
+  renderDashStats();
+}
+
+function renderStudents() {
+  const tbody = document.getElementById('studentsTbody');
+  const start = (currentPage.students-1)*PAGE_SIZE;
+  const page  = filteredStudents.slice(start, start+PAGE_SIZE);
+  if (!page.length) { tbody.innerHTML = '<tr><td colspan="8" class="center muted" style="padding:2rem;">No students found.</td></tr>'; renderPagination('studentPagination',filteredStudents.length,'students'); return; }
+  tbody.innerHTML = page.map(s=>{
+    const hostelLabel = s.hostel==='female' ? 'Women Hostel' : s.hostel==='male' ? 'Men Hostel' : '';
+    const roomCode = s.roomCode || (s.floor && s.roomNumber ? `${s.floor}-${s.roomNumber}` : '');
+    const roomLabel = [hostelLabel, s.floor||'', roomCode].filter(Boolean).join(' · ');
+    return `
+    <tr>
+      <td><code>${s.studentId||s.id}</code></td>
+      <td>${esc(s.fullName||'—')}</td>
+      <td style="font-size:.8rem;">${esc(s.email||'—')}</td>
+      <td>${esc(s.phone||'—')}</td>
+      <td>
+        ${roomBadge(s.roomType)}
+        ${roomLabel ? `<div class="muted" style="font-size:.75rem; margin-top:.25rem;">${esc(roomLabel)}</div>` : ''}
+      </td>
+      <td>${payBadge(s.paymentStatus)}</td>
+      <td style="font-size:.8rem;">${s.dueDate||'—'}</td>
+      <td><div class="actions-cell">
+        <button class="btn btn-sm btn-primary" onclick="openEditStudent('${s.id}')">✏️</button>
+        <button class="btn btn-sm btn-accent"  onclick="openChangePass('${s.id}','${esc(s.fullName||'')}')">🔑</button>
+        <button class="btn btn-sm btn-danger"  onclick="confirmDelete('Delete student <b>${esc(s.fullName||s.id)}</b>?',()=>deleteStudent('${s.id}'))">🗑️</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+  renderPagination('studentPagination',filteredStudents.length,'students');
+}
+
+function renderPagination(containerId, total, key) {
+  const container = document.getElementById(containerId);
+  const totalPages = Math.ceil(total/PAGE_SIZE);
+  if (totalPages <= 1) { container.innerHTML=''; return; }
+  let html = `<button class="page-btn" onclick="goPage('${key}',${currentPage[key]-1})" ${currentPage[key]===1?'disabled':''}>‹</button>`;
+  for (let i=1;i<=totalPages;i++) html += `<button class="page-btn ${currentPage[key]===i?'active':''}" onclick="goPage('${key}',${i})">${i}</button>`;
+  html += `<button class="page-btn" onclick="goPage('${key}',${currentPage[key]+1})" ${currentPage[key]===totalPages?'disabled':''}>›</button>`;
+  container.innerHTML = html;
+}
+
+window.goPage = (key, page) => {
+  currentPage[key] = page;
+  if (key==='students') renderStudents();
+  if (key==='payments') renderPayments();
+};
+
+window.filterStudents = () => {
+  const q = document.getElementById('studentSearch').value.toLowerCase();
+  const p = document.getElementById('filterPayment').value;
+  filteredStudents = allStudents.filter(s=>
+    (!q || (s.fullName||'').toLowerCase().includes(q)||(s.email||'').toLowerCase().includes(q)||(s.studentId||'').includes(q)) &&
+    (!p || s.paymentStatus===p)
+  );
+  currentPage.students = 1;
+  renderStudents();
+};
+
+window.filterPayments = () => {
+  const q = document.getElementById('paySearch').value.toLowerCase();
+  const p = document.getElementById('filterPayStatus').value;
+  filteredPayments = allStudents.filter(s=>
+    (!q || (s.fullName||'').toLowerCase().includes(q)||(s.studentId||'').includes(q)) &&
+    (!p || s.paymentStatus===p)
+  );
+  currentPage.payments = 1;
+  renderPayments();
+};
+
+function renderPayments() {
+  const tbody = document.getElementById('paymentsTbody');
+  const start = (currentPage.payments-1)*PAGE_SIZE;
+  const page  = filteredPayments.slice(start,start+PAGE_SIZE);
+  if (!page.length) { tbody.innerHTML='<tr><td colspan="7" class="center muted" style="padding:2rem;">No results.</td></tr>'; renderPagination('paymentsPagination',filteredPayments.length,'payments'); return; }
+  tbody.innerHTML = page.map(s=>{
+    const rt = ROOM_TYPES[s.roomType];
+    const roomLabel = [s.hostel==='female'?'Women Hostel':s.hostel==='male'?'Men Hostel':'', s.floor||'', s.roomCode || (s.floor && s.roomNumber ? `${s.floor}-${s.roomNumber}` : '')].filter(Boolean).join(' · ');
+    return `<tr>
+      <td><code>${s.studentId||s.id}</code></td>
+      <td>${esc(s.fullName||'—')}</td>
+      <td>
+        ${roomBadge(s.roomType)}
+        ${roomLabel ? `<div class="muted" style="font-size:.75rem; margin-top:.25rem;">${esc(roomLabel)}</div>`:''}
+      </td>
+      <td>${rt?rt.price.toLocaleString()+' RWF':'—'}</td>
+      <td>${payBadge(s.paymentStatus)}</td>
+      <td style="font-size:.8rem;">${s.dueDate||'—'}</td>
+      <td><button class="btn btn-sm btn-primary" onclick="openPayment('${s.id}','${esc(s.fullName||'')}','${s.paymentStatus||'Pending'}','${s.dueDate||''}','${esc(s.notes||'')}')">✏️ Edit</button></td>
+    </tr>`;
+  }).join('');
+  renderPagination('paymentsPagination',filteredPayments.length,'payments');
+}
+
+function renderRooms() {
+  const roomSets = {
+    single: new Set(),
+    double: new Set(),
+    quad: new Set()
+  };
+  const uniqueRooms = new Set();
+  allStudents.forEach(s=>{
+    const roomCode = s.roomCode || (s.floor && s.roomNumber ? `${s.floor}-${s.roomNumber}` : '');
+    if (!roomCode) return;
+    uniqueRooms.add(roomCode);
+    if (s.roomType && roomSets[s.roomType]) {
+      roomSets[s.roomType].add(roomCode);
+    }
+  });
+  document.getElementById('singleOcc').textContent = roomSets.single.size + ' / ' + 240;
+  document.getElementById('doubleOcc').textContent = roomSets.double.size + ' / ' + 240;
+  document.getElementById('quadOcc').textContent   = roomSets.quad.size + ' / ' + 240;
+  const tbody = document.getElementById('roomsTbody');
+  tbody.innerHTML = allStudents.map(s=>{
+    const hostelLabel = s.hostel==='female' ? 'Women Hostel' : s.hostel==='male' ? 'Men Hostel' : '';
+    const roomCode = s.roomCode || (s.floor && s.roomNumber ? `${s.floor}-${s.roomNumber}` : '');
+    const roomLabel = [hostelLabel, s.floor||'', roomCode].filter(Boolean).join(' · ');
+    return `
+    <tr>
+      <td><code>${s.studentId||s.id}</code></td>
+      <td>${esc(s.fullName||'—')}</td>
+      <td>
+        ${roomBadge(s.roomType)}
+        ${roomLabel ? `<div class="muted" style="font-size:.75rem; margin-top:.25rem;">${esc(roomLabel)}</div>` : ''}
+      </td>
+      <td>${payBadge(s.paymentStatus)}</td>
+      <td><button class="btn btn-sm btn-primary" onclick="openEditStudent('${s.id}')">✏️ Edit</button></td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="5" class="center muted" style="padding:2rem;">No students assigned.</td></tr>';
+}
+
+function updateRoomPreview() {
+  const floor = document.getElementById('sFloor')?.value || '';
+  const roomNumberEl = document.getElementById('sRoomNumber');
+  const roomNumber = roomNumberEl?.value.trim().toUpperCase() || '';
+  if (roomNumberEl) roomNumberEl.value = roomNumber;
+  const preview = document.getElementById('sRoomCodePreview');
+  if (preview) preview.value = floor && roomNumber ? `${floor}-${roomNumber}` : '';
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const floorInput = document.getElementById('sFloor');
+  const roomInput = document.getElementById('sRoomNumber');
+  if (floorInput) floorInput.addEventListener('change', updateRoomPreview);
+  if (roomInput) roomInput.addEventListener('input', updateRoomPreview);
+});
+
+function renderDashStats() {
+  document.getElementById('statStudents').textContent  = allStudents.length;
+  document.getElementById('statAdmins').textContent    = allAdmins.length;
+  const roomSets = { single:new Set(), double:new Set(), quad:new Set() };
+  const occupiedRooms = new Set();
+  allStudents.forEach(s=>{
+    const roomCode = s.roomCode || (s.floor && s.roomNumber ? `${s.floor}-${s.roomNumber}` : '');
+    if (!roomCode) return;
+    occupiedRooms.add(roomCode);
+    if (s.roomType && roomSets[s.roomType]) {
+      roomSets[s.roomType].add(roomCode);
+    }
+  });
+  document.getElementById('statOccupied').textContent  = occupiedRooms.size;
+  document.getElementById('statAvailable').textContent = Math.max(0, 240 - occupiedRooms.size);
+  document.getElementById('statOverdue').textContent   = allStudents.filter(s=>s.paymentStatus==='Overdue').length;
+
+  // Recent students + revenue summary
+  const paidStudents = allStudents.filter(s=>s.paymentStatus==='Paid');
+  let totalRevenue = 0;
+  paidStudents.forEach(s=>{ if (s.roomType && ROOM_TYPES[s.roomType]) totalRevenue += ROOM_TYPES[s.roomType].price; });
+  const tbody = document.getElementById('recentStudentsTbody');
+  tbody.innerHTML = [...allStudents].slice(-8).reverse().map(s=>`
+    <tr>
+      <td><code>${s.studentId||s.id}</code></td>
+      <td>${esc(s.fullName||'—')}</td>
+      <td>${roomBadge(s.roomType)}</td>
+      <td>${payBadge(s.paymentStatus)}</td>
+      <td style="font-size:.8rem;">${s.dueDate||'—'}</td>
+    </tr>`).join('') || '<tr><td colspan="5" class="center muted">No students yet.</td></tr>';
+  const monthlyRevenueEl = document.getElementById('statMonthlyRevenue');
+  if (monthlyRevenueEl) monthlyRevenueEl.textContent = totalRevenue.toLocaleString() + ' RWF';
+}
+
+/* ─── Add / Edit Student ─────────────────────── */
+window.openAddStudent = () => {
+  editingStudentId = null;
+  document.getElementById('studentModalTitle').textContent = 'Add Student';
+  document.getElementById('studentSaveBtn').textContent    = 'Create Student';
+  ['sId','sName','sEmail','sPass','sPhone','sNotes','sRoomNumber'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('sGender').value   = '';
+  document.getElementById('sHostel').value   = '';
+  document.getElementById('sFloor').value    = '';
+  document.getElementById('sRoomType').value = '';
+  document.getElementById('sPayStatus').value= 'Pending';
+  document.getElementById('sDueDate').value  = '';
+  document.getElementById('sRoomCodePreview').value = '';
+  document.getElementById('sId').disabled    = false;
+  document.getElementById('sEmail').disabled = false;
+  document.getElementById('sPass').placeholder = 'Min. 6 chars (required)';
+  document.getElementById('studentModalAlert').innerHTML='';
+  openModal('studentModal');
+};
+
+window.openStudentModal = window.openAddStudent;
+
+window.openEditStudent = (docId) => {
+  const s = allStudents.find(x=>x.id===docId);
+  if (!s) return;
+  editingStudentId = docId;
+  document.getElementById('studentModalTitle').textContent = 'Edit Student';
+  document.getElementById('studentSaveBtn').textContent    = 'Save Changes';
+  document.getElementById('sId').value       = s.studentId||'';
+  document.getElementById('sName').value     = s.fullName||'';
+  document.getElementById('sEmail').value    = s.email||'';
+  document.getElementById('sPass').value     = '';
+  document.getElementById('sPhone').value    = s.phone||'';
+  document.getElementById('sGender').value   = s.gender||'';
+  document.getElementById('sHostel').value   = s.hostel||'';
+  document.getElementById('sFloor').value    = s.floor||'';
+  document.getElementById('sRoomNumber').value = s.roomNumber||'';
+  document.getElementById('sRoomType').value = s.roomType||'';
+  document.getElementById('sPayStatus').value= s.paymentStatus||'Pending';
+  document.getElementById('sDueDate').value  = s.dueDate||'';
+  document.getElementById('sNotes').value    = s.notes||'';
+  document.getElementById('sRoomCodePreview').value = s.roomCode || (s.floor && s.roomNumber ? `${s.floor}-${s.roomNumber}` : '');
+  document.getElementById('sId').disabled    = true;
+  document.getElementById('sEmail').disabled = true;
+  document.getElementById('sPass').placeholder= 'Leave blank to keep current';
+  document.getElementById('studentModalAlert').innerHTML='';
+  openModal('studentModal');
+};
+
+window.saveStudent = async () => {
+  const alertEl = document.getElementById('studentModalAlert');
+  const btn     = document.getElementById('studentSaveBtn');
+  const rawRoomNumber = document.getElementById('sRoomNumber').value.trim();
+  const roomNumber = rawRoomNumber.toUpperCase();
+  const roomCode = document.getElementById('sRoomCodePreview').value.trim().toUpperCase();
+  const floor = document.getElementById('sFloor').value.trim().toUpperCase();
+  const data = {
+    studentId:     document.getElementById('sId').value.trim(),
+    fullName:      document.getElementById('sName').value.trim(),
+    email:         document.getElementById('sEmail').value.trim(),
+    phone:         document.getElementById('sPhone').value.trim(),
+    gender:        document.getElementById('sGender').value,
+    hostel:        document.getElementById('sHostel').value,
+    floor,
+    roomNumber,
+    roomCode,
+    roomType:      document.getElementById('sRoomType').value,
+    paymentStatus: document.getElementById('sPayStatus').value,
+    dueDate:       document.getElementById('sDueDate').value,
+    notes:         document.getElementById('sNotes').value.trim(),
+    role:          'student',
+  };
+  document.getElementById('sRoomNumber').value = roomNumber;
+  document.getElementById('sRoomCodePreview').value = roomCode;
+  document.getElementById('sFloor').value = floor;
+  const pass = document.getElementById('sPass').value;
+
+  if (!editingStudentId && (!data.studentId||!data.fullName||!data.email||!pass)) {
+    alertEl.innerHTML='<div class="alert alert-error">⚠️ Please fill all required fields.</div>'; return;
+  }
+  if (!data.hostel || !data.floor || !data.roomNumber) {
+    alertEl.innerHTML='<div class="alert alert-error">⚠️ Please assign Hostel, Floor, and Room Number.</div>'; return;
+  }
+  if (!data.roomCode) {
+    alertEl.innerHTML='<div class="alert alert-error">⚠️ Room code is missing. Please choose floor and room number.</div>'; return;
+  }
+
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    if (!editingStudentId) {
+      // Create student via secure Cloud Function
+      await createStudent({ ...data, password: pass });
+    } else {
+      await updateStudent(editingStudentId, {
+        fullName: data.fullName, phone: data.phone, gender: data.gender,
+        hostel: data.hostel, floor: data.floor, roomNumber: data.roomNumber,
+        roomCode: data.roomCode, roomType: data.roomType, paymentStatus: data.paymentStatus,
+        dueDate: data.dueDate, notes: data.notes
+      });
+    }
+    closeModal('studentModal');
+    await loadStudents();
+    showToast('Student saved successfully!','success');
+  } catch(err) {
+    let msg = err.message;
+    if (err.code==='auth/email-already-in-use') msg='This email is already registered.';
+    alertEl.innerHTML=`<div class="alert alert-error">❌ ${msg}</div>`;
+  } finally { btn.disabled=false; btn.textContent=editingStudentId?'Save Changes':'Create Student'; }
+};
+
+window.deleteStudent = async (docId) => {
+  try {
+    await deleteStudent(docId);
+    await loadStudents();
+    showToast('Student deleted.','success');
+  } catch(err){ showToast('Delete failed: '+err.message,'error'); }
+};
+
+/* ─── Change Student Password ────────────────── */
+let changePassDocId = null;
+window.openChangePass = (docId, name) => {
+  changePassDocId = docId;
+  document.getElementById('changePassStudentName').textContent = name;
+  document.getElementById('newStudentPass').value='';
+  document.getElementById('confirmStudentPass').value='';
+  document.getElementById('changePassAlert').innerHTML='';
+  openModal('changePassModal');
+};
+window.doChangeStudentPass = async () => {
+  const p1 = document.getElementById('newStudentPass').value;
+  const p2 = document.getElementById('confirmStudentPass').value;
+  const alertEl = document.getElementById('changePassAlert');
+  if (!p1||p1.length<6){ alertEl.innerHTML='<div class="alert alert-error">Password must be at least 6 characters.</div>'; return; }
+  if (p1!==p2){ alertEl.innerHTML='<div class="alert alert-error">Passwords do not match.</div>'; return; }
+  try {
+    const btn = document.querySelector('#changePassModal .btn-primary');
+    btn.disabled = true; btn.textContent = 'Updating…';
+    await adminResetStudentPassword({ studentId: changePassDocId, newPassword: p1 });
+    closeModal('changePassModal');
+    showToast('Password updated successfully!','success');
+    btn.disabled = false; btn.textContent = 'Update Password';
+  } catch(err){ alertEl.innerHTML=`<div class="alert alert-error">❌ ${err.message}</div>`; }
+};
+
+/* ─── Payment Modal ──────────────────────────── */
+window.openPayment = (docId,name,status,dueDate,notes) => {
+  editingPaymentId = docId;
+  document.getElementById('payStudentName').textContent = name;
+  document.getElementById('payStatus').value    = status||'Pending';
+  document.getElementById('payDueDate').value   = dueDate||'';
+  document.getElementById('payNotes').value     = notes||'';
+  document.getElementById('paymentModalAlert').innerHTML='';
+  openModal('paymentModal');
+};
+window.savePayment = async () => {
+  const alertEl = document.getElementById('paymentModalAlert');
+  try {
+    const status = document.getElementById('payStatus').value;
+    const dueDate = document.getElementById('payDueDate').value;
+    const notes = document.getElementById('payNotes').value;
+    await updateDoc(doc(db,'users',editingPaymentId),{
+      paymentStatus: status,
+      dueDate: dueDate,
+      notes: notes,
+      updatedAt: serverTimestamp()
+    });
+    if (status === 'Paid') {
+      await addDoc(collection(db, 'payments'), {
+        studentId: editingPaymentId,
+        status: 'Paid',
+        amount: allStudents.find(s=>s.id===editingPaymentId)?.roomType && ROOM_TYPES[allStudents.find(s=>s.id===editingPaymentId).roomType] ? ROOM_TYPES[allStudents.find(s=>s.id===editingPaymentId).roomType].price : 0,
+        dueDate: dueDate,
+        notes: notes,
+        createdAt: serverTimestamp()
+      });
+    }
+    closeModal('paymentModal');
+    await loadStudents();
+    showToast('Payment updated!','success');
+  } catch(err){ alertEl.innerHTML=`<div class="alert alert-error">❌ ${err.message}</div>`; }
+};
+
+/* ─── Tickets ────────────────────────────────── */
+async function loadTickets() {
+  // real-time listener for all tickets
+  try {
+    if (currentTicketsUnsub) currentTicketsUnsub();
+  } catch(e){}
+  currentTicketsUnsub = onSnapshot(query(collection(db,'tickets'), orderBy('createdAt','desc')), snap => {
+    allTickets = snap.docs.map(d=>({id:d.id,...d.data()}));
+    filterTickets();
+    refreshTicketMetrics();
+  }, err => { console.warn('loadTickets failed', err); allTickets = []; filterTickets(); refreshTicketMetrics(); });
+}
+
+function refreshTicketMetrics() {
+  const pending = allTickets.filter(t=>t.status==='Pending').length;
+  const badge   = document.getElementById('pendingTicketsBadge');
+  if (pending>0){ badge.textContent=pending; badge.style.display='inline-block'; }
+  else badge.style.display='none';
+  document.getElementById('statPendingT').textContent  = allTickets.filter(t=>t.status==='Pending'||t.status==='In Progress').length;
+  document.getElementById('statResolvedT').textContent = allTickets.filter(t=>t.status==='Resolved').length;
+}
+
+window.filterTickets = () => {
+  const q = document.getElementById('ticketSearch').value.toLowerCase();
+  const s = document.getElementById('filterTicketStatus').value;
+  filteredTickets = allTickets.filter(t=>
+    (!q||(t.subject||'').toLowerCase().includes(q)||(t.studentName||'').toLowerCase().includes(q)) &&
+    (!s||t.status===s) &&
+    (!ticketStatusFilter||t.status===ticketStatusFilter)
+  );
+  renderTickets();
+};
+
+window.setTicketFilter = (status) => {
+  ticketStatusFilter = status || '';
+  document.getElementById('filterTicketStatus').value = status && status !== '' ? status : '';
+  ['ticketStatusTabAll','ticketStatusTabPending','ticketStatusTabProgress','ticketStatusTabResolved'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    btn.classList.toggle('active', (
+      (id==='ticketStatusTabAll' && status==='') ||
+      (id==='ticketStatusTabPending' && status==='Pending') ||
+      (id==='ticketStatusTabProgress' && status==='In Progress') ||
+      (id==='ticketStatusTabResolved' && status==='Resolved')
+    ));
+  });
+  filterTickets();
+};
+
+function renderTickets() {
+  const tbody = document.getElementById('ticketsTbody');
+  if (!filteredTickets.length){ tbody.innerHTML='<tr><td colspan="6" class="center muted" style="padding:2rem;">No tickets found.</td></tr>'; return; }
+  tbody.innerHTML = filteredTickets.map(t=>`
+    <tr>
+      <td style="font-size:.75rem;"><code>${t.id.slice(-6)}</code></td>
+      <td>${esc(t.studentName||'—')}</td>
+      <td>${esc(t.subject||'—')}</td>
+      <td>${ticketBadge(t.status)}</td>
+      <td style="font-size:.8rem;">${t.createdAt?.toDate?t.createdAt.toDate().toLocaleDateString():t.createdAt?.seconds?new Date(t.createdAt.seconds*1000).toLocaleDateString():'—'}</td>
+      <td style="display:flex;gap:.4rem;align-items:center;">
+        <button class="btn btn-sm btn-primary" onclick="openTicket('${t.id}')">💬 View</button>
+        <button class="btn btn-sm btn-danger" onclick="confirmDelete('Delete this ticket and all messages? This cannot be undone.',()=>deleteTicket('${t.id}'))">🗑️ Delete</button>
+      </td>
+    </tr>`).join('');
+}
+
+window.openTicket = async (ticketId) => {
+  currentTicketId = ticketId;
+  const t = allTickets.find(x=>x.id===ticketId);
+  document.getElementById('ticketModalTitle').textContent = t?.subject||'Ticket';
+  document.getElementById('ticketStatusSel').value = t?.status||'Pending';
+  document.getElementById('ticketModalMeta').innerHTML = `
+    <div><span style="color:var(--muted);font-size:.8rem;">Student</span><br/><strong>${esc(t?.studentName||'—')}</strong></div>
+    <div><span style="color:var(--muted);font-size:.8rem;">Status</span><br/>${ticketBadge(t?.status)}</div>
+    <div><span style="color:var(--muted);font-size:.8rem;">Category</span><br/>${esc(t?.category||'General')}</div>
+    <div><span style="color:var(--muted);font-size:.8rem;">Created</span><br/><span style="font-size:.8rem;">${t?.createdAt?.toDate?t.createdAt.toDate().toLocaleDateString():t?.createdAt?.seconds?new Date(t.createdAt.seconds*1000).toLocaleDateString():'—'}</span></div>`;
+  document.getElementById('adminReplyInput').value='';
+  const resolved = t?.status === 'Resolved';
+  document.getElementById('adminChatInputRow').style.display = resolved ? 'none' : 'flex';
+  document.getElementById('ticketNewBtn').style.display = t?.status === 'Pending' ? 'none' : 'inline-flex';
+  document.getElementById('ticketProgressBtn').style.display = t?.status === 'In Progress' ? 'none' : 'inline-flex';
+  document.getElementById('ticketCompletedBtn').style.display = t?.status === 'Resolved' ? 'none' : 'inline-flex';
+  openModal('ticketModal');
+  subscribeToMessages(ticketId);
+};
+
+function subscribeToMessages(ticketId) {
+  if (currentTicketUnsub) currentTicketUnsub();
+  if (currentTicketDocUnsub) currentTicketDocUnsub();
+  const chatBox = document.getElementById('adminChatBox');
+  const inputRow = document.getElementById('adminChatInputRow');
+  chatBox.innerHTML='<div class="spinner" style="width:24px;height:24px;border-width:3px;margin:1rem auto;"></div>';
+  currentTicketUnsub = onSnapshot(
+    query(collection(db,'tickets',ticketId,'messages'), orderBy('createdAt','asc')),
+    snap=>{
+      if (snap.empty){ chatBox.innerHTML='<p style="text-align:center;color:var(--muted);font-size:.85rem;margin:1rem 0;">No messages yet. Start the conversation.</p>'; return; }
+      chatBox.innerHTML = snap.docs.map(d=>{
+        const m = d.data();
+        const isAdmin = m.senderRole==='admin';
+        const time = m.createdAt?.toDate?m.createdAt.toDate().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):m.createdAt?.seconds?new Date(m.createdAt.seconds*1000).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'';
+        return `<div class="t-msg ${isAdmin?'admin':'student'}">
+          <div class="bubble">${esc(m.text||'')}</div>
+          <div class="t-meta">${isAdmin?'Admin':'Student'} · ${time}</div>
+        </div>`;
+      }).join('');
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+  );
+  currentTicketDocUnsub = onSnapshot(doc(db,'tickets',ticketId), snap => {
+    if (!snap.exists()) return;
+    const ticketData = snap.data();
+    const resolved = ticketData.status === 'Resolved';
+    if (inputRow) inputRow.style.display = resolved ? 'none' : 'flex';
+    document.getElementById('ticketStatusSel').value = ticketData.status || 'Pending';
+    document.getElementById('ticketNewBtn').style.display = ticketData.status === 'Pending' ? 'none' : 'inline-flex';
+    document.getElementById('ticketProgressBtn').style.display = ticketData.status === 'In Progress' ? 'none' : 'inline-flex';
+    document.getElementById('ticketCompletedBtn').style.display = ticketData.status === 'Resolved' ? 'none' : 'inline-flex';
+    const ticketIndex = allTickets.findIndex(x=>x.id===ticketId);
+    if (ticketIndex !== -1) {
+      allTickets[ticketIndex] = { ...allTickets[ticketIndex], status: ticketData.status };
+      filterTickets();
+      refreshTicketMetrics();
+    }
+  });
+}
+
+window.sendAdminReply = async () => {
+  const text = document.getElementById('adminReplyInput').value.trim();
+  if (!text||!currentTicketId) return;
+  const ticket = allTickets.find(x=>x.id===currentTicketId);
+  if (ticket?.status==='Resolved') {
+    showToast('Cannot reply to a resolved ticket.','error');
+    return;
+  }
+  document.getElementById('adminReplyInput').value='';
+  try {
+    await addDoc(collection(db,'tickets',currentTicketId,'messages'),{
+      text, senderRole:'admin', senderName: currentAdminData?.fullName||'Admin',
+      createdAt: serverTimestamp()
+    });
+    if (ticket?.status==='Pending') {
+      await updateDoc(doc(db,'tickets',currentTicketId),{status:'In Progress', updatedAt: serverTimestamp()});
+      document.getElementById('ticketStatusSel').value='In Progress';
+    }
+  } catch(err){ showToast('Failed to send: '+err.message,'error'); }
+};
+
+window.saveTicketStatus = async () => {
+  if (!currentTicketId) return;
+  const status = document.getElementById('ticketStatusSel').value;
+  await updateTicketStatus(currentTicketId, status, true);
+};
+
+window.setTicketStatusFast = async (status) => {
+  if (!currentTicketId) return;
+  await updateTicketStatus(currentTicketId, status, true);
+};
+
+async function updateTicketStatus(ticketId, status, closeAfter = false) {
+  try {
+    await updateDoc(doc(db,'tickets',ticketId),{status, updatedAt:serverTimestamp()});
+    if (closeAfter) closeModal('ticketModal');
+    await loadTickets();
+    showToast(`Ticket status set to ${status}.`,'success');
+  } catch(err){ showToast('Failed: '+err.message,'error'); }
+}
+
+window.deleteTicket = async (ticketId) => {
+  if (!ticketId) return;
+  try {
+    // delete messages subcollection + ticket doc using batch
+    const msgsSnap = await getDocs(query(collection(db,'tickets',ticketId,'messages')));
+    const batch = writeBatch(db);
+    msgsSnap.docs.forEach(d => batch.delete(doc(db,'tickets',ticketId,'messages',d.id)));
+    batch.delete(doc(db,'tickets',ticketId));
+    await batch.commit();
+    closeModal('ticketModal');
+    showToast('Ticket deleted.','success');
+  } catch(err){ showToast('Failed to delete ticket: '+err.message,'error'); }
+}
+
+/* ─── Messages ───────────────────────────────── */
+async function loadMessages() {
+  try {
+    const snap = await getDocs(query(collection(db,'contactMessages'), orderBy('createdAt','desc')));
+    allMessages = snap.docs.map(d=>({id:d.id,...d.data()}));
+  } catch (err) {
+    console.warn('loadMessages failed', err);
+    allMessages = [];
+  }
+  renderMessages();
+  const unread = allMessages.filter(m=>!m.read).length;
+  const badge  = document.getElementById('unreadMsgBadge');
+  if (unread>0){ badge.textContent=unread; badge.style.display='inline-block'; }
+  else badge.style.display='none';
+}
+
+function renderMessages() {
+  const tbody = document.getElementById('messagesTbody');
+  if (!allMessages.length){ tbody.innerHTML='<tr><td colspan="6" class="center muted" style="padding:2rem;">No messages yet.</td></tr>'; return; }
+  tbody.innerHTML = allMessages.map(m=>`
+    <tr style="${!m.read?'font-weight:700;background:#fffde7;':''}">
+      <td>${esc(m.name||'—')}</td>
+      <td style="font-size:.8rem;">${esc(m.email||'—')}</td>
+      <td>${esc(m.subject||'—')}</td>
+      <td style="font-size:.8rem;">${m.createdAt?.toDate?m.createdAt.toDate().toLocaleDateString():m.createdAt?.seconds?new Date(m.createdAt.seconds*1000).toLocaleDateString():'—'}</td>
+      <td>${m.read?'<span class="badge badge-gray">Read</span>':'<span class="badge badge-yellow">New</span>'}</td>
+      <td><button class="btn btn-sm btn-primary" onclick="viewMessage('${m.id}')">👁️ View</button></td>
+    </tr>`).join('');
+}
+
+window.viewMessage = async (msgId) => {
+  const m = allMessages.find(x=>x.id===msgId);
+  document.getElementById('messageModalBody').innerHTML = `
+    <div style="display:grid;gap:.75rem;">
+      <div><span class="muted">From</span><br/><strong>${esc(m.name||'—')}</strong></div>
+      <div><span class="muted">Email</span><br/><a href="mailto:${esc(m.email||'')}">${esc(m.email||'—')}</a></div>
+      ${m.phone?`<div><span class="muted">Phone</span><br/>${esc(m.phone)}</div>`:''}
+      <div><span class="muted">Subject</span><br/><strong>${esc(m.subject||'—')}</strong></div>
+      <div><span class="muted">Message</span><br/><div style="background:var(--bg);padding:1rem;border-radius:var(--radius);font-size:.9rem;line-height:1.7;margin-top:.25rem;">${esc(m.message||'—').replace(/\n/g,'<br/>')}</div></div>
+    </div>`;
+  openModal('messageModal');
+  if (!m.read) {
+    await updateDoc(doc(db,'contactMessages',msgId),{read:true});
+    await loadMessages();
+  }
+};
+
+/* ─── Admins ─────────────────────────────────── */
+async function loadAdmins() {
+  try {
+    const snap = await getDocs(query(collection(db,'users'), where('role','==','admin')));
+    allAdmins = snap.docs.map(d=>({id:d.id,...d.data()}));
+  } catch (err) {
+    console.warn('loadAdmins failed', err);
+    allAdmins = [];
+  }
+  renderAdmins();
+  renderDashStats();
+}
+
+function renderAdmins() {
+  const tbody = document.getElementById('adminsTbody');
+  if (!allAdmins.length){ tbody.innerHTML='<tr><td colspan="5" class="center muted" style="padding:2rem;">No admins.</td></tr>'; return; }
+  tbody.innerHTML = allAdmins.map(a=>`
+    <tr>
+      <td><code>${a.studentId||a.id}</code></td>
+      <td>${esc(a.fullName||'—')}</td>
+      <td>${esc(a.email||'—')}</td>
+      <td style="font-size:.8rem;">${a.createdAt?.toDate?a.createdAt.toDate().toLocaleDateString():a.createdAt?.seconds?new Date(a.createdAt.seconds*1000).toLocaleDateString():'—'}</td>
+      <td>${a.uid===currentAdminUid?'<span class="badge badge-blue">You</span>':`<button class="btn btn-sm btn-danger" onclick="confirmDelete('Remove admin <b>${esc(a.fullName||a.id)}</b>?',()=>deleteAdmin('${a.id}'))">🗑️ Remove</button>`}</td>
+    </tr>`).join('');
+}
+
+window.openAddAdmin = () => {
+  ['aId','aName','aEmail','aPass'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('adminModalAlert').innerHTML='';
+  openModal('adminModal');
+};
+
+window.openAdminModal = window.openAddAdmin;
+
+window.saveAdmin = async () => {
+  const alertEl = document.getElementById('adminModalAlert');
+  const id    = document.getElementById('aId').value.trim();
+  const name  = document.getElementById('aName').value.trim();
+  const email = document.getElementById('aEmail').value.trim();
+  const pass  = document.getElementById('aPass').value;
+  if (!id||!name||!email||!pass){ alertEl.innerHTML='<div class="alert alert-error">⚠️ All fields required.</div>'; return; }
+  try {
+    await createStudent({ studentId: id, fullName: name, email, password: pass, role: 'admin' });
+    closeModal('adminModal');
+    await loadAdmins();
+    showToast('Admin created!','success');
+  } catch(err){
+    let msg = err.message || String(err);
+    alertEl.innerHTML = `<div class="alert alert-error">❌ ${msg}</div>`;
+  }
+};
+
+window.deleteAdmin = async (docId) => {
+  try {
+    await updateStudent(docId, { role: 'student' });
+    await loadAdmins();
+    showToast('Admin role removed.','success');
+  } catch(err){ showToast('Failed: '+err.message,'error'); }
+};
+
+/* ─── Settings ───────────────────────────────── */
+window.changeAdminPassword = async () => {
+  const p1 = document.getElementById('newAdminPass').value;
+  const p2 = document.getElementById('confirmAdminPass').value;
+  const alertEl = document.getElementById('settingsAlert');
+  if (!p1||p1.length<6){ alertEl.innerHTML='<div class="alert alert-error">Password must be at least 6 characters.</div>'; return; }
+  if (p1!==p2){ alertEl.innerHTML='<div class="alert alert-error">Passwords do not match.</div>'; return; }
+  try {
+    await updatePassword(auth.currentUser, p1);
+    alertEl.innerHTML='<div class="alert alert-success">✅ Password updated successfully!</div>';
+    document.getElementById('newAdminPass').value='';
+    document.getElementById('confirmAdminPass').value='';
+  } catch(err){ alertEl.innerHTML=`<div class="alert alert-error">❌ ${err.message}</div>`; }
+};
+
+/* ─── Helpers ────────────────────────────────── */
+function openModal(id)  { document.getElementById(id).classList.remove('hidden'); }
+function closeModal(id) {
+  document.getElementById(id).classList.add('hidden');
+  if (id==='ticketModal'&&currentTicketUnsub){ currentTicketUnsub(); currentTicketUnsub=null; }
+}
+window.closeModal = closeModal;
+
+window.confirmDelete = (msg, cb) => {
+  document.getElementById('deleteModalMsg').innerHTML = msg;
+  deleteCallback = cb;
+  openModal('deleteModal');
+};
+document.getElementById('deleteConfirmBtn').addEventListener('click',()=>{
+  if (deleteCallback) deleteCallback();
+  closeModal('deleteModal');
+  deleteCallback = null;
+});
+
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function payBadge(s) {
+  const map = {Paid:'green',Pending:'yellow',Overdue:'red'};
+  return `<span class="badge badge-${map[s]||'gray'}">${s||'—'}</span>`;
+}
+function roomBadge(s) {
+  const roomType = typeof s === 'string' ? s : s?.roomType;
+  const names={single:'Single',double:'Double',quad:'Quad'};
+  const typeLabel = roomType?`<span class="badge badge-blue">${names[roomType]||roomType}</span>`:'<span class="badge badge-gray">—</span>';
+  if (typeof s !== 'object' || !s) return typeLabel;
+  const hostel = s.hostel === 'female' ? 'Women Hostel' : s.hostel === 'male' ? 'Men Hostel' : '';
+  const floor = s.floor || '';
+  const roomNumber = s.roomNumber || '';
+  const roomCode = [floor, roomNumber].filter(Boolean).join('-');
+  const extras = [hostel, roomCode].filter(Boolean);
+  return `<div style="display:flex;flex-wrap:wrap;gap:.3rem;">${typeLabel}${extras.length?`<span class="badge badge-gray">${esc(extras.join(' · '))}</span>`:''}</div>`;
+}
+function ticketBadge(s) {
+  if (!s) return '<span class="badge badge-gray">—</span>';
+  if (s === 'Pending') return '<span class="badge badge-blue">New</span>';
+  if (s === 'In Progress') return '<span class="badge badge-orange">In Progress</span>';
+  if (s === 'Resolved') return '<span class="badge badge-green">Completed</span>';
+  return `<span class="badge badge-gray">${esc(s)}</span>`;
+}
+
+let toastTimer;
+function showToast(msg, type='success') {
+  clearTimeout(toastTimer);
+  let el = document.getElementById('globalToast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id='globalToast';
+    el.style.cssText='position:fixed;bottom:1.5rem;right:1.5rem;z-index:9999;min-width:240px;max-width:380px;';
+    document.body.appendChild(el);
+  }
+  el.innerHTML=`<div class="alert alert-${type}">${msg}</div>`;
+  toastTimer=setTimeout(()=>el.innerHTML='',4000);
+}
+window.showToast = showToast;
+
+// ── Exports / Reports ─────────────────────────
+function download(filename, text) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text], { type: 'text/csv' }));
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
+function exportStudentsCSV() {
+  if (!allStudents.length) { showToast('No students to export','error'); return; }
+  const headers = ['Student ID','Full Name','Email','Phone','Room Type','Hostel','Floor','Room Number','Room Code','Payment Status','Due Date','Notes','Created At'];
+  const rows = allStudents.map(s=>[
+    s.studentId||s.id, s.fullName||'', s.email||'', s.phone||'', s.roomType||'', s.hostel||'', s.floor||'', s.roomNumber||'', s.roomCode||'', s.paymentStatus||'', s.dueDate||'', (s.notes||'').replace(/\n/g,' '), (s.createdAt?.toDate? s.createdAt.toDate().toISOString() : '')
+  ]);
+  const csv = [headers.join(','), ...rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(','))].join('\n');
+  download('students.csv', csv);
+}
+
+function exportPaymentsCSV() {
+  if (!allStudents.length) { showToast('No payments to export','error'); return; }
+  const headers = ['Student ID','Full Name','Room Type','Hostel','Floor','Room Number','Room Code','Monthly Fee','Payment Status','Due Date','Notes'];
+  const rows = allStudents.map(s=>{
+    const fee = s.roomType && ROOM_TYPES[s.roomType] ? ROOM_TYPES[s.roomType].price : '';
+    return [s.studentId||s.id, s.fullName||'', s.roomType||'', s.hostel||'', s.floor||'', s.roomNumber||'', s.roomCode||'', fee, s.paymentStatus||'', s.dueDate||'', (s.notes||'').replace(/\n/g,' ')];
+  });
+  const csv = [headers.join(','), ...rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(','))].join('\n');
+  download('payments.csv', csv);
+}
+
+function exportTicketsCSV() {
+  if (!allTickets.length) { showToast('No tickets to export','error'); return; }
+  const headers = ['Ticket ID','Student ID','Student Name','Subject','Status','Category','Created At'];
+  const rows = allTickets.map(t=>[t.id, t.studentId||'', t.studentName||'', t.subject||'', t.status||'', t.category||'', t.createdAt?.toDate? t.createdAt.toDate().toISOString(): '']);
+  const csv = [headers.join(','), ...rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(','))].join('\n');
+  download('tickets.csv', csv);
+}
+
+// ── XLSX Export / Import (SheetJS) ───────────
+function loadSheetJS() {
+  return new Promise((resolve, reject) => {
+    if (window.XLSX) return resolve(window.XLSX);
+    const s = document.createElement('script');
+    s.src = 'https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js';
+    s.onload = () => resolve(window.XLSX);
+    s.onerror = reject;
+    document.head.appendChild(s);
+  });
+}
+
+async function exportStudentsXLSX() {
+  await loadSheetJS();
+  const data = (allStudents || []).map(s=>({
+    StudentID: s.studentId||s.id, FullName: s.fullName||'', Email: s.email||'', Phone: s.phone||'',
+    RoomType: s.roomType||'', Hostel: s.hostel||'', Floor: s.floor||'', RoomNumber: s.roomNumber||'', RoomCode: s.roomCode||'', PaymentStatus: s.paymentStatus||'', DueDate: s.dueDate||'', Notes: s.notes||'', CreatedAt: s.createdAt?.toDate? s.createdAt.toISOString():''
+  }));
+  const ws = XLSX.utils.json_to_sheet(data);
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Students');
+  XLSX.writeFile(wb, 'students.xlsx');
+}
+
+async function exportPaymentsXLSX() {
+  await loadSheetJS();
+  const data = (allStudents || []).map(s=>({
+    StudentID: s.studentId||s.id, FullName: s.fullName||'', RoomType: s.roomType||'', Hostel: s.hostel||'', Floor: s.floor||'', RoomNumber: s.roomNumber||'', RoomCode: s.roomCode||'', MonthlyFee: s.roomType && ROOM_TYPES[s.roomType]? ROOM_TYPES[s.roomType].price:'',
+    PaymentStatus: s.paymentStatus||'', DueDate: s.dueDate||'', Notes: s.notes||''
+  }));
+  const ws = XLSX.utils.json_to_sheet(data);
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Payments');
+  XLSX.writeFile(wb, 'payments.xlsx');
+}
+
+async function exportTicketsXLSX(status) {
+  await loadSheetJS();
+  const tickets = (allTickets || []).filter(t => !status || t.status === status);
+  if (!tickets.length) {
+    showToast(status ? `No ${status} tickets to export` : 'No tickets to export', 'error');
+    return;
+  }
+  const fileLabel = status ? status.replace(/ /g,'_').toLowerCase() : 'all';
+  const data = tickets.map(t=>({
+    TicketID: t.id,
+    StudentID: t.studentId||'',
+    StudentName: t.studentName||'',
+    Subject: t.subject||'',
+    Status: t.status||'',
+    Category: t.category||'',
+    Description: t.description||'',
+    CreatedAt: t.createdAt?.toDate ? t.createdAt.toISOString() : t.createdAt?.seconds ? new Date(t.createdAt.seconds*1000).toISOString() : '',
+    UpdatedAt: t.updatedAt?.toDate ? t.updatedAt.toISOString() : t.updatedAt?.seconds ? new Date(t.updatedAt.seconds*1000).toISOString() : ''
+  }));
+  const ws = XLSX.utils.json_to_sheet(data);
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Tickets');
+  XLSX.writeFile(wb, `tickets_${fileLabel}.xlsx`);
+}
+
+async function handleStudentsXlsxFile(e) {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  try {
+    await loadSheetJS();
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      const data = ev.target.result;
+      const wb = XLSX.read(data, { type: 'binary' });
+      const sheet = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+      if (!rows.length) { showToast('No rows found in file','error'); return; }
+      const summary = { created:0, failed:0, errors:[] };
+      document.getElementById('studentsXlsxInput').disabled = true;
+      for (const r of rows) {
+        // Accept flexible column names
+        const studentId = r['Student ID'] || r['StudentID'] || r['studentId'] || r['id'] || r['ID'] || '';
+        const fullName  = r['Full Name'] || r['FullName'] || r['name'] || r['Name'] || '';
+        const email     = r['Email'] || r['email'] || '';
+        const phone     = r['Phone'] || r['phone'] || '';
+        const roomType  = (r['Room Type'] || r['RoomType'] || '').toString().toLowerCase().includes('single')? 'single' : (r['Room Type'] || r['RoomType'] || '').toString().toLowerCase().includes('double')? 'double' : (r['Room Type'] || r['RoomType'] || '').toString().toLowerCase().includes('quad')? 'quad' : (r['roomType']||r['room']||'');
+        const hostel = r['Hostel'] || r['hostel'] || '';
+        const floor = r['Floor'] || r['floor'] || '';
+        const roomNumber = r['Room Number'] || r['RoomNumber'] || r['roomNumber'] || '';
+        const roomCode = r['Room Code'] || r['RoomCode'] || r['roomCode'] || (floor && roomNumber ? `${floor}-${roomNumber}` : '');
+        const paymentStatus = r['Payment Status'] || r['PaymentStatus'] || r['paymentStatus'] || 'Pending';
+        const dueDate   = r['Due Date'] || r['DueDate'] || r['dueDate'] || '';
+        const notes     = r['Notes'] || r['notes'] || '';
+        const password  = r['Password'] || r['password'] || String(studentId).slice(-6) || 'ChangeMe123';
+        if (!studentId || !fullName || !email) { summary.failed++; summary.errors.push(`Missing required data for row: ${JSON.stringify(r)}`); continue; }
+        try {
+          await createStudent({ studentId: String(studentId), fullName: String(fullName), email: String(email), password: String(password), phone: String(phone), hostel, floor, roomNumber, roomCode, roomType, paymentStatus, dueDate, notes, role: 'student' });
+          summary.created++;
+        } catch(err) {
+          summary.failed++; summary.errors.push(`${studentId}: ${err.message||String(err)}`);
+        }
+      }
+      document.getElementById('studentsXlsxInput').disabled = false;
+      showToast(`Import complete — created: ${summary.created}, failed: ${summary.failed}`,'success');
+      if (summary.errors.length) console.warn('Import errors', summary.errors);
+      await loadStudents();
+    };
+    reader.readAsBinaryString(file);
+  } catch(err) { showToast('Failed to parse file: '+err.message,'error'); document.getElementById('studentsXlsxInput').disabled = false; }
+}
+
+</script>
+<style>
+@media(max-width:1200px) {
+  .stats-grid{grid-template-columns:repeat(3,1fr);gap:.75rem;}
+  .stat-card{min-width:auto;}
+}
+@media(max-width:900px) {
+  .sidebar{width:240px;}
+  .dash-main{margin-left:0;}
+  .sidebar.open{transform:translateX(0);}
+  .stats-grid{grid-template-columns:repeat(2,1fr);}
+  .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  table{font-size:.85rem;}
+  .btn{font-size:.85rem;padding:.5rem .75rem;}
+}
+@media(max-width:700px) {
+  .sidebar{width:100%;position:fixed;z-index:99;left:0;top:0;height:100vh;transform:translateX(-100%);transition:transform .25s;}
+  .dash-layout{flex-direction:column;}
+  .dash-main{margin-left:0;}
+  .sidebar-overlay{display:none;}
+  .sidebar-overlay.show{display:block;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:98;}
+  .hamburger{display:block;}
+  .stats-grid{grid-template-columns:repeat(2,1fr);gap:.5rem;}
+  .stat-card{padding:.75rem;min-height:auto;}
+  .stat-icon{font-size:1.5rem;}
+  .stat-val{font-size:1.2rem;}
+  .stat-lbl{font-size:.7rem;}
+  table{font-size:.75rem;}
+  th,td{padding:.4rem;text-align:center;}
+  .search-bar{min-width:140px;}
+  .btn{font-size:.8rem;padding:.4rem .6rem;}
+  .modal{margin:1rem;max-width:calc(100%-2rem);}
+  .card{padding:.75rem;}
+  .form-row{grid-template-columns:1fr;}
+  .pagination{flex-wrap:wrap;gap:.25rem;}
+  .page-btn{font-size:.8rem;padding:.4rem;}
+}
+@media(max-width:480px) {
+  .topbar-title{font-size:.9rem;}
+  .section-heading{font-size:1.1rem;}
+  .stats-grid{grid-template-columns:1fr;}
+  table{font-size:.7rem;}
+  th,td{padding:.3rem;}
+  .badge{font-size:.7rem;padding:.2rem .4rem;}
+  .btn{font-size:.75rem;padding:.3rem .5rem;}
+  .actions-cell{display:flex;gap:.25rem;}
+  .actions-cell .btn{padding:.3rem;}
+}
+</style>
+</body>
+</html>

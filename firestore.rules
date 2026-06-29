@@ -1,0 +1,80 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ─── Default Deny All ───────────────────────────
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // ─── Users Collection ───────────────────────────
+    match /users/{document=**} {
+      // Admins can read/write all users
+      allow read, write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'superadmin'];
+      
+      // Students can read/write only their own profile
+      allow read, write: if request.auth != null && document == request.auth.uid;
+    }
+
+    // ─── Tickets Collection ─────────────────────────
+    match /tickets/{ticketId} {
+      // Admins can read all tickets
+      allow read: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'superadmin'];
+      
+      // Students can read their own tickets
+      allow read: if request.auth != null && resource.data.studentUid == request.auth.uid;
+      
+      // Students can create tickets
+      allow create: if request.auth != null && request.resource.data.studentUid == request.auth.uid;
+      
+      // Admins can update ticket status
+      allow update: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'superadmin'];
+    }
+
+    // ─── Ticket Messages Subcollection ──────────────
+    match /tickets/{ticketId}/messages/{msgId} {
+      // Anyone involved can read ticket messages
+      allow read: if request.auth != null;
+      
+      // Admins and ticket creator can write messages
+      allow create: if request.auth != null && (request.resource.data.senderRole in ['admin', 'student']);
+    }
+
+    // ─── Payments Collection ────────────────────────
+    match /payments/{document=**} {
+      // Admins can read all payments
+      allow read: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'superadmin'];
+      
+      // Admins can write payments
+      allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'superadmin'];
+    }
+
+    // ─── Rooms Collection ───────────────────────────
+    match /rooms/{document=**} {
+      // Everyone can read rooms
+      allow read: if request.auth != null;
+      
+      // Only admins can write rooms
+      allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'superadmin'];
+    }
+
+    // ─── Activity Logs Collection ───────────────────
+    match /activityLogs/{document=**} {
+      // Only admins can read logs
+      allow read: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'superadmin'];
+      
+      // Only Cloud Functions can write logs (via Admin SDK)
+      allow write: if false;
+    }
+
+    // ─── Contact Messages Collection ────────────────
+    match /contactMessages/{document=**} {
+      // Allow anyone to create contact messages
+      allow create: if true;
+      
+      // Admins can read and update contact messages
+      allow read, update: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'superadmin'];
+    }
+
+  }
+}

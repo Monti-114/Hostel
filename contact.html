@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Contact — ULK Student Hostel</title>
+<link rel="stylesheet" href="style.css" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+<header class="navbar">
+  <a class="logo" href="index.html">🏠 ULK <span>Hostel</span></a>
+  <button class="nav-toggle" id="navToggle" aria-label="Menu"><span></span><span></span><span></span></button>
+  <nav id="mainNav">
+    <a href="index.html">Home</a>
+    <a href="about.html">About</a>
+    <a href="rooms.html">Rooms</a>
+    <a href="contact.html" class="active">Contact</a>
+    <a href="login.html" class="btn btn-accent" style="padding:.4rem 1rem;border-radius:8px;">Login</a>
+  </nav>
+</header>
+
+<!-- HERO -->
+<div style="background:linear-gradient(135deg,var(--navy) 0%,#1565C0 100%);color:#fff;padding:4rem 2rem;text-align:center;">
+  <h1 style="font-size:clamp(1.8rem,4vw,2.6rem);font-weight:900;margin-bottom:.75rem;">Get in <span style="color:var(--accent);">Touch</span></h1>
+  <p style="color:rgba(255,255,255,.8);max-width:500px;margin:0 auto;">Questions about rooms, pricing, or availability? We're here to help.</p>
+</div>
+
+<section class="section" style="max-width:1000px;margin:0 auto;">
+  <div class="contact-grid">
+
+    <!-- INFO -->
+    <div>
+      <h2 style="font-size:1.3rem;font-weight:800;margin-bottom:1.5rem;">Contact <span style="color:var(--blue);">Information</span></h2>
+      <div class="contact-info-item">
+        <div class="ci-icon">📧</div>
+        <div>
+          <div style="font-weight:700;">Email</div>
+          <a href="mailto:mohammedelfath3@gmail.com" style="color:var(--sky);">mohammedelfath3@gmail.com</a>
+        </div>
+      </div>
+      <div class="contact-info-item">
+        <div class="ci-icon">📞</div>
+        <div>
+          <div style="font-weight:700;">Phone</div>
+          <a href="tel:0796509980" style="color:var(--sky);">0796509980</a>
+        </div>
+      </div>
+      <div class="contact-info-item">
+        <div class="ci-icon">📍</div>
+        <div>
+          <div style="font-weight:700;">Location</div>
+          <div style="color:var(--muted);">Near ULK University, Kigali, Rwanda</div>
+        </div>
+      </div>
+      <div class="contact-info-item">
+        <div class="ci-icon">🕐</div>
+        <div>
+          <div style="font-weight:700;">Office Hours</div>
+          <div style="color:var(--muted);">Monday – Friday: 8:00 AM – 5:00 PM<br/>Saturday: 9:00 AM – 1:00 PM</div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:1rem;background:linear-gradient(135deg,var(--navy),#1565C0);color:#fff;border:none;">
+        <h4 style="margin-bottom:.5rem;">🏠 ULK Student Hostel</h4>
+        <p style="font-size:.875rem;color:rgba(255,255,255,.8);">Room assignments are handled by our administration. Students cannot self-register — all accounts are created by our admin team.</p>
+      </div>
+    </div>
+
+    <!-- FORM -->
+    <div>
+      <div class="card">
+        <h2 style="font-size:1.2rem;font-weight:800;margin-bottom:1.2rem;">Send a Message</h2>
+        <div id="formAlert"></div>
+        <div class="form-group">
+          <label for="cfName">Full Name *</label>
+          <input type="text" id="cfName" class="form-control" placeholder="Your full name" required />
+        </div>
+        <div class="form-group">
+          <label for="cfEmail">Email Address *</label>
+          <input type="email" id="cfEmail" class="form-control" placeholder="your@email.com" required />
+        </div>
+        <div class="form-group">
+          <label for="cfPhone">Phone Number</label>
+          <input type="tel" id="cfPhone" class="form-control" placeholder="07XXXXXXXX" />
+        </div>
+        <div class="form-group">
+          <label for="cfSubject">Subject *</label>
+          <select id="cfSubject" class="form-control" required>
+            <option value="">Select a subject</option>
+            <option>Room Availability</option>
+            <option>Pricing Information</option>
+            <option>Room Assignment</option>
+            <option>Payment Question</option>
+            <option>General Inquiry</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="cfMessage">Message *</label>
+          <textarea id="cfMessage" class="form-control" rows="5" placeholder="Type your message here..." required></textarea>
+        </div>
+        <button class="btn btn-primary" id="sendBtn" onclick="sendMessage()" style="width:100%;justify-content:center;font-size:1rem;padding:.75rem;">
+          📤 Send Message
+        </button>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<footer>
+  <p>© 2025 ULK Student Hostel &nbsp;|&nbsp; <a href="contact.html">Contact Us</a> &nbsp;|&nbsp; <a href="login.html">Staff Login</a></p>
+</footer>
+
+<script type="module">
+import { db, addDoc, collection, serverTimestamp } from './firebase.js';
+
+window.sendMessage = async function() {
+  const name    = document.getElementById('cfName').value.trim();
+  const email   = document.getElementById('cfEmail').value.trim();
+  const phone   = document.getElementById('cfPhone').value.trim();
+  const subject = document.getElementById('cfSubject').value;
+  const message = document.getElementById('cfMessage').value.trim();
+  const alert   = document.getElementById('formAlert');
+
+  if (!name || !email || !subject || !message) {
+    alert.innerHTML = '<div class="alert alert-error">⚠️ Please fill in all required fields.</div>';
+    return;
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    alert.innerHTML = '<div class="alert alert-error">⚠️ Please enter a valid email address.</div>';
+    return;
+  }
+
+  const btn = document.getElementById('sendBtn');
+  btn.disabled = true;
+  btn.textContent = 'Sending…';
+
+  try {
+    await addDoc(collection(db, 'contactMessages'), {
+      name, email, phone, subject, message,
+      read: false,
+      createdAt: serverTimestamp()
+    });
+    alert.innerHTML = '<div class="alert alert-success">✅ Message sent! We\'ll get back to you soon.</div>';
+    document.getElementById('cfName').value = '';
+    document.getElementById('cfEmail').value = '';
+    document.getElementById('cfPhone').value = '';
+    document.getElementById('cfSubject').value = '';
+    document.getElementById('cfMessage').value = '';
+  } catch (err) {
+    alert.innerHTML = `<div class="alert alert-error">❌ Failed to send: ${err.message}</div>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '📤 Send Message';
+  }
+};
+</script>
+<script>
+  document.getElementById('navToggle').addEventListener('click',()=>{document.getElementById('mainNav').classList.toggle('open');});
+</script>
+</body>
+</html>
